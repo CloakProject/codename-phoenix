@@ -336,6 +336,14 @@ Alihkan fail data ke dalam tab semasa</translation>
         <translation>dompet</translation>
     </message>
     <message>
+        <source>Wallet:</source>
+        <translation>Portofel:</translation>
+    </message>
+    <message>
+        <source>default wallet</source>
+        <translation>portofel implicit</translation>
+    </message>
+    <message>
         <source>Click to disable network activity.</source>
         <translation>Tekan untuk lumpuhkan rangkaian</translation>
     </message>
@@ -358,6 +366,10 @@ Alihkan fail data ke dalam tab semasa</translation>
     <message>
         <source>Proxy is &lt;b&gt;enabled&lt;/b&gt;: %1</source>
         <translation>Proxy is &lt;b&gt;enabled&lt;/b&gt;: %1</translation>
+    </message>
+    <message>
+        <source>Proxy is &lt;b&gt;enabled&lt;/b&gt;: %1</source>
+        <translation>Proxy este&lt;b&gt;activat&lt;/b&gt;:%1</translation>
     </message>
     <message>
         <source>Send coins to a Bitcoin address</source>
@@ -575,6 +587,12 @@ Alihkan fail data ke dalam tab semasa</translation>
         <source>Wallet: %1
 </source>
         <translation>Wallet: %1
+</translation>
+    </message>
+    <message>
+        <source>Wallet: %1
+</source>
+        <translation>Portofel: %1
 </translation>
     </message>
     <message>
@@ -874,6 +892,14 @@ Alihkan fail data ke dalam tab semasa</translation>
     <message>
         <source>The entered address "%1" is already in the address book with label "%2".</source>
         <translation>The entered address "%1" is already in the address book with label "%2".</translation>
+    </message>
+    <message>
+        <source>Address "%1" already exists as a receiving address with label "%2" and so cannot be added as a sending address.</source>
+        <translation>Adresa "%1" exista deja ca si adresa de primire cu eticheta "%2" si deci nu poate fi folosita ca si adresa de trimitere.</translation>
+    </message>
+    <message>
+        <source>The entered address "%1" is already in the address book with label "%2".</source>
+        <translation>Adresa introdusa "%1" este deja in lista de adrese cu eticheta "%2"</translation>
     </message>
     <message>
         <source>Could not unlock wallet.</source>
@@ -1865,6 +1891,10 @@ Alihkan fail data ke dalam tab semasa</translation>
     <message>
         <source>&amp;Unban</source>
         <translation>&amp;Unban</translation>
+    </message>
+    <message>
+        <source>default wallet</source>
+        <translation>portofel implicit</translation>
     </message>
     <message>
         <source>Welcome to the %1 RPC console.</source>

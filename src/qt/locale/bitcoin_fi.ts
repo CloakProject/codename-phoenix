@@ -340,6 +340,14 @@ Allekirjoitus on mahdollista vain 'legacy'-tyyppisillä osoitteilla.</translatio
         <translation>Lompakko:</translation>
     </message>
     <message>
+        <source>Wallet:</source>
+        <translation>Lompakko:</translation>
+    </message>
+    <message>
+        <source>default wallet</source>
+        <translation>oletuslompakko</translation>
+    </message>
+    <message>
         <source>Click to disable network activity.</source>
         <translation>Paina poistaaksesi verkkoyhteysilmaisin käytöstä.</translation>
     </message>
@@ -2096,6 +2104,10 @@ Allekirjoitus on mahdollista vain 'legacy'-tyyppisillä osoitteilla.</translatio
     <message>
         <source>&amp;Unban</source>
         <translation>&amp;Poista esto</translation>
+    </message>
+    <message>
+        <source>default wallet</source>
+        <translation>oletuslompakko</translation>
     </message>
     <message>
         <source>Welcome to the %1 RPC console.</source>
