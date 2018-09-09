@@ -25,6 +25,7 @@ except ImportError:
 def hash256_reversed(byte_str):
     return hash256(byte_str)[::-1]
 
+
 class ZMQSubscriber:
     def __init__(self, socket, topic):
         self.sequence = 0

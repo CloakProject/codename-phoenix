@@ -229,6 +229,9 @@ class SegWitTest(BitcoinTestFramework):
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     def setup_network(self):
         self.setup_nodes()
         self.connect_nodes(0, 1)

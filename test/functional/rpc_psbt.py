@@ -89,6 +89,9 @@ class PSBTTest(BitcoinTestFramework):
         changepos = psbtx["changepos"]
         assert_equal(decoded_psbt["tx"]["vout"][changepos]["scriptPubKey"]["type"], expected_type)
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     def run_test(self):
         # Create and fund a raw tx for sending 10 BTC
         psbtx1 = self.nodes[0].walletcreatefundedpsbt([], {self.nodes[2].getnewaddress():10})['psbt']

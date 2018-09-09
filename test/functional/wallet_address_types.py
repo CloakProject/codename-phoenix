@@ -64,6 +64,7 @@ from test_framework.util import (
     assert_raises_rpc_error,
 )
 
+
 class AddressTypeTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 6
@@ -79,6 +80,9 @@ class AddressTypeTest(BitcoinTestFramework):
         for args in self.extra_args:
             args.append("-whitelist=noban@127.0.0.1")
         self.supports_cli = False
+
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
 
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()

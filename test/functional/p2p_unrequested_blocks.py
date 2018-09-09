@@ -69,6 +69,9 @@ class AcceptBlockTest(BitcoinTestFramework):
         self.num_nodes = 2
         self.extra_args = [[], ["-minimumchainwork=0x10"]]
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     def setup_network(self):
         self.setup_nodes()
 

@@ -22,6 +22,9 @@ class ReceivedByTest(BitcoinTestFramework):
         self.skip_if_no_wallet()
         self.skip_if_no_cli()
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     def run_test(self):
         # Generate block to get out of IBD
         self.nodes[0].generate(1)

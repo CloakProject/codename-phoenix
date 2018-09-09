@@ -149,6 +149,9 @@ class ImportRescanTest(BitcoinTestFramework):
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     def setup_network(self):
         self.extra_args = [[] for _ in range(self.num_nodes)]
         for i, import_node in enumerate(IMPORT_NODES, 2):

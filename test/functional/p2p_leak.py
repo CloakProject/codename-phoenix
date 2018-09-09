@@ -92,6 +92,9 @@ class P2PLeakTest(BitcoinTestFramework):
     def set_test_params(self):
         self.num_nodes = 1
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     def run_test(self):
         # Peer that never sends a version. We will send a bunch of messages
         # from this peer anyway and verify eventual disconnection.

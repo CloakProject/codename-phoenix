@@ -51,6 +51,9 @@ class BlockchainTest(BitcoinTestFramework):
         self.num_nodes = 1
         self.supports_cli = False
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     def run_test(self):
         self.mine_chain()
         self.restart_node(0, extra_args=['-stopatheight=207', '-prune=1'])  # Set extra args with pruning after rescan is complete

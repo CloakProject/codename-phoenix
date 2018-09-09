@@ -30,6 +30,9 @@ class WalletTest(BitcoinTestFramework):
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     def setup_network(self):
         self.setup_nodes()
         # Only need nodes 0-2 running at start of test

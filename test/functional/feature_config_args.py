@@ -16,6 +16,9 @@ class ConfArgsTest(BitcoinTestFramework):
         self.supports_cli = False
         self.wallet_names = []
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     def test_config_file_parser(self):
         # Assume node is stopped
 

@@ -74,6 +74,9 @@ class BIP65Test(BitcoinTestFramework):
             },
         )
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     def run_test(self):
         peer = self.nodes[0].add_p2p_connection(P2PInterface())
 

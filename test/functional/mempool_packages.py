@@ -41,6 +41,9 @@ class MempoolPackagesTest(BitcoinTestFramework):
     def skip_test_if_missing_module(self):
         self.skip_if_no_wallet()
 
+    def skip_test_if_missing_module(self):
+        self.skip_if_no_wallet()
+
     # Build a transaction that spends parent_txid:vout
     # Return amount sent
     def chain_transaction(self, node, parent_txid, vout, value, fee, num_outputs):
