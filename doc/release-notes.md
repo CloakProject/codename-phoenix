@@ -60,13 +60,28 @@ RPC
 0.17.0 change log
 =================
 
-...
+0.17.0.1 change log
+===================
+
+### Build system
+- #14416 `eb2cc84` Fix OSX dmg issue (10.12 to 10.14) (jonasschnelli)
+
+### Documentation
+- #14509 `1b5af2c` [0.17] doc: use SegWit in getblocktemplate example (Sjors)
 
 Credits
 =======
 
 Thanks to everyone who directly contributed to this release:
 
+<<<<<<< HEAD
 
 As well as to everyone that helped with translations on
 [Transifex](https://www.transifex.com/bitcoin/bitcoin/).
+=======
+- Jonas Schnelli
+- Pieter Wuille
+- Sjors Provoost
+- Wladimir J. van der Laan
+
+>>>>>>> 248e5ec34 (doc: Update release notes for 0.17.0.1)
