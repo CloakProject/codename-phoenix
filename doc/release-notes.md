@@ -60,14 +60,26 @@ RPC
 0.17.0 change log
 =================
 
-0.17.0.1 change log
-===================
+Bitcoin Core should also work on most other Unix-like systems but is not
+frequently tested on them.
 
-### Build system
-- #14416 `eb2cc84` Fix OSX dmg issue (10.12 to 10.14) (jonasschnelli)
+From 0.17.0 onwards macOS <10.10 is no longer supported. 0.17.0 is built using Qt 5.9.x, which doesn't
+support versions of macOS older than 10.10.
 
-### Documentation
-- #14509 `1b5af2c` [0.17] doc: use SegWit in getblocktemplate example (Sjors)
+Known issues
+============
+
+...
+
+Notable changes
+===============
+
+...
+
+0.17.x change log
+=================
+
+...
 
 Credits
 =======
