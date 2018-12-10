@@ -1993,6 +1993,9 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 
     connOptions.vSeedNodes = args.GetArgs("-seednode");
 
+    if (connOptions.m_specified_outgoing.empty())
+        connOptions.vSeedNodes.insert(connOptions.vSeedNodes.end(), chainparams.DNSSeeds().begin(), chainparams.DNSSeeds().end());
+
     // Initiate outbound connections unless connect=0
     connOptions.m_use_addrman_outgoing = !args.IsArgSet("-connect");
     if (!connOptions.m_use_addrman_outgoing) {

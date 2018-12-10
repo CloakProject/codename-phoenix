@@ -2469,6 +2469,7 @@ bool CConnman::Start(CScheduler& scheduler, const Options& connOptions)
         return false;
     }
 
+    if (connOptions.m_specified_outgoing.empty())
     for (const auto& strDest : connOptions.vSeedNodes) {
         AddAddrFetch(strDest);
     }
