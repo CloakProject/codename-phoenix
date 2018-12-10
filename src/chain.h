@@ -15,6 +15,10 @@
 
 #include <vector>
 
+#define BLOCK_PROOF_OF_STAKE 0x01 // is proof-of-stake block
+#define BLOCK_STAKE_ENTROPY 0x02  // entropy bit for stake modifier
+#define BLOCK_STAKE_MODIFIER 0x04
+
 /**
  * Maximum amount of time that a block timestamp is allowed to exceed the
  * current network-adjusted time before the block will be accepted.
@@ -137,6 +141,7 @@ enum BlockStatus: uint32_t {
 class CBlockIndex
 {
 public:
+
     //! pointer to the hash of the block, if any. Memory is owned by this CBlockIndex
     const uint256* phashBlock{nullptr};
 
@@ -180,11 +185,48 @@ public:
     uint32_t nBits{0};
     uint32_t nNonce{0};
 
+    unsigned int nFlags; // ppcoin: block index flags
+
+    uint64_t nStakeModifier; // hash modifier for proof-of-stake
+
+    // proof-of-stake specific fields
+    COutPoint prevoutStake;
+    unsigned int nStakeTime;
+    arith_uint256 hashProofOfStake;
+
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId{0};
 
     //! (memory only) Maximum nTime in the chain up to and including this block.
-    unsigned int nTimeMax{0};
+    unsigned int nTimeMax;
+
+    void SetNull()
+    {
+        phashBlock = nullptr;
+        pprev = nullptr;
+        pskip = nullptr;
+        nHeight = 0;
+        nFile = 0;
+        nFlags = 0;
+        nStakeModifier = 0;
+        hashProofOfStake = arith_uint256();
+        prevoutStake.SetNull();
+        nStakeTime = 0;
+        nDataPos = 0;
+        nUndoPos = 0;
+        nChainWork = arith_uint256();
+        nTx = 0;
+        nChainTx = 0;
+        nStatus = 0;
+        nSequenceId = 0;
+        nTimeMax = 0;
+
+        nVersion       = 0;
+        hashMerkleRoot = uint256();
+        nTime          = 0;
+        nBits          = 0;
+        nNonce         = 0;
+    }
 
     CBlockIndex()
     {
@@ -301,6 +343,46 @@ public:
         return false;
     }
 
+    bool IsProofOfWork() const
+    {
+        return !(nFlags & BLOCK_PROOF_OF_STAKE);
+    }
+
+    bool IsProofOfStake() const
+    {
+        return (nFlags & BLOCK_PROOF_OF_STAKE);
+    }
+
+    void SetProofOfStake()
+    {
+        nFlags |= BLOCK_PROOF_OF_STAKE;
+    }
+
+    unsigned int GetStakeEntropyBit() const
+    {
+        return ((nFlags & BLOCK_STAKE_ENTROPY) >> 1);
+    }
+
+    bool SetStakeEntropyBit(unsigned int nEntropyBit)
+    {
+        if (nEntropyBit > 1)
+            return false;
+        nFlags |= (nEntropyBit ? BLOCK_STAKE_ENTROPY : 0);
+        return true;
+    }
+
+    void SetStakeModifier(uint64_t nModifier, bool fGeneratedStakeModifier)
+    {
+        nStakeModifier = nModifier;
+        if (fGeneratedStakeModifier)
+            nFlags |= BLOCK_STAKE_MODIFIER;
+    }
+
+    bool GeneratedStakeModifier() const
+    {
+        return (nFlags & BLOCK_STAKE_MODIFIER);
+    }
+
     //! Build the skiplist pointer for this entry.
     void BuildSkip();
 
@@ -319,11 +401,14 @@ const CBlockIndex* LastCommonAncestor(const CBlockIndex* pa, const CBlockIndex* 
 /** Used to marshal pointers into hashes for db storage. */
 class CDiskBlockIndex : public CBlockIndex
 {
+private:
+    uint256 blockHash;
 public:
     uint256 hashPrev;
 
     CDiskBlockIndex() {
         hashPrev = uint256();
+        blockHash = uint256();
     }
 
     explicit CDiskBlockIndex(const CBlockIndex* pindex) : CBlockIndex(*pindex) {
@@ -349,6 +434,7 @@ public:
         READWRITE(obj.nTime);
         READWRITE(obj.nBits);
         READWRITE(obj.nNonce);
+        READWRITE(blockHash);
     }
 
     uint256 GetBlockHash() const
@@ -360,6 +446,9 @@ public:
         block.nTime           = nTime;
         block.nBits           = nBits;
         block.nNonce          = nNonce;
+
+        // todo: this can be optimized by caching hashes (same for blocks) - rzr
+        const_cast<CDiskBlockIndex*>(this)->blockHash = block.GetHash();
         return block.GetHash();
     }
 
