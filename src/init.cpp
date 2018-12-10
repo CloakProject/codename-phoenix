@@ -1742,6 +1742,9 @@ bool AppInitMain()
 
     connOptions.vSeedNodes = gArgs.GetArgs("-seednode");
 
+    if (connOptions.m_specified_outgoing.empty())
+        connOptions.vSeedNodes.insert(connOptions.vSeedNodes.end(), chainparams.DNSSeeds().begin(), chainparams.DNSSeeds().end());
+
     // Initiate outbound connections unless connect=0
     connOptions.m_use_addrman_outgoing = !gArgs.IsArgSet("-connect");
     if (!connOptions.m_use_addrman_outgoing) {
