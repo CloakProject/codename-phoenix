@@ -90,6 +90,11 @@ struct Params {
      */
     bool signet_blocks{false};
     std::vector<uint8_t> signet_challenge;
+    // proof of stake
+    uint256 posLimit;
+    unsigned int nStakeMinAge;
+    unsigned int nStakeMaxAge;
+    unsigned int nStakeTargetSpacing;        
 };
 } // namespace Consensus
 
