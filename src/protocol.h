@@ -260,6 +260,12 @@ extern const char* CFCHECKPT;
  * @since protocol version 70016 as described by BIP 339.
  */
 extern const char* WTXIDRELAY;
+/**
+* Contains an Enigma Annoucement.
+* Sent to announce our Enigma processing status to the Cloak network.
+* @since protocol version 60018
+*/
+extern const char* ENG_ANNOUNCEMENT;
 }; // namespace NetMsgType
 
 /* Get a vector of all valid message types (see above) */

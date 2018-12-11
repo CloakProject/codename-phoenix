@@ -2113,6 +2113,10 @@ static bool PrepareBlockFilterRequest(CNode& peer, const CChainParams& chain_par
         peer.fDisconnect = true;
         return false;
     }
+    if (strCommand == NetMsgType::ENG_ANNOUNCEMENT) {
+        // Enigma Announcement
+        return true;
+    }
 
     filter_index = GetBlockFilterIndex(filter_type);
     if (!filter_index) {
@@ -2467,6 +2471,18 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         int64_t nTimeOffset = nTime - GetTime();
         pfrom.nTimeOffset = nTimeOffset;
         AddTimeData(pfrom.addr, nTimeOffset);
+
+        /*
+        // Ask the first connected node for block updates
+        static int nAskedForBlocks = 0;
+        if (!pfrom->fClient && !pfrom->fOneShot &&
+            (pfrom->nStartingHeight > (nBestHeight - 144)) &&
+            (pfrom->nVersion < NOBLKS_VERSION_START ||
+                pfrom->nVersion >= NOBLKS_VERSION_END) &&
+            (nAskedForBlocks < 1 || vNodes.size() <= 1)) {
+            nAskedForBlocks++;
+            pfrom->PushGetBlocks(pindexBest, uint256(0));
+        }*/
 
         // If the peer is old enough to have the old alert system, send it the final alert.
         if (greatest_common_version <= 70012) {
@@ -3335,8 +3351,14 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             // relayed before full validation (see BIP 152), so we don't want to disconnect
             // the peer if the header turns out to be for an invalid block.
             // Note that if a peer tries to build on an invalid chain, that
+<<<<<<< HEAD
             // will be detected and the peer will be disconnected/discouraged.
             return ProcessHeadersMessage(pfrom, {cmpctblock.header}, /*via_compact_block=*/true);
+=======
+            // will be detected and the peer will be banned.
+            bool success = ProcessHeadersMessage(pfrom, connman, {cmpctblock.header}, chainparams, /*punish_duplicate_invalid=*/false);
+            return success;
+>>>>>>> 12be17867 (Add Enigma annoucement message skeleton.)
         }
 
         if (fBlockReconstructed) {
@@ -3475,11 +3497,24 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         }
         headers.resize(nCount);
         for (unsigned int n = 0; n < nCount; n++) {
-            vRecv >> headers[n];
-            ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
+            CBlock b;
+            vRecv >> b;
+            headers[n] = b.GetBlockHeader();
+           // int size = ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
+            int xx = 1;
         }
 
+<<<<<<< HEAD
         return ProcessHeadersMessage(pfrom, headers, /*via_compact_block=*/false);
+=======
+        // Headers received via a HEADERS message should be valid, and reflect
+        // the chain the peer is on. If we receive a known-invalid header,
+        // disconnect the peer if it is using one of our outbound connection
+        // slots.
+        bool should_punish = !pfrom->fInbound && !pfrom->m_manual_connection;
+        bool success = ProcessHeadersMessage(pfrom, connman, headers, chainparams, should_punish);
+        return success;
+>>>>>>> 12be17867 (Add Enigma annoucement message skeleton.)
     }
 
     if (msg_type == NetMsgType::BLOCK)
@@ -4138,8 +4173,16 @@ bool PeerManager::SendMessages(CNode* pto)
 
         // Start block sync
         if (pindexBestHeader == nullptr)
+<<<<<<< HEAD
             pindexBestHeader = ::ChainActive().Tip();
         bool fFetch = state.fPreferredDownload || (nPreferredDownload == 0 && !pto->fClient && !pto->IsAddrFetchConn()); // Download if this is a nice peer, or we have no nice peers and this one might do.
+=======
+            pindexBestHeader = chainActive.Tip();
+
+        bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
+
+        bool fFetch = state.fPreferredDownload || nPreferredDownload == 0 && !pto->fClient && !pto->fOneShot; // Download if this is a nice peer, or we have no nice peers and this one might do.
+>>>>>>> 12be17867 (Add Enigma annoucement message skeleton.)
         if (!state.fSyncStarted && !pto->fClient && !fImporting && !fReindex) {
             // Only actively request headers from a single peer, unless we're close to today.
             if ((nSyncStarted == 0 && fFetch) || pindexBestHeader->GetBlockTime() > GetAdjustedTime() - 24 * 60 * 60) {
@@ -4174,7 +4217,9 @@ bool PeerManager::SendMessages(CNode* pto)
             // add all to the inv queue.
             LOCK(pto->cs_inventory);
             std::vector<CBlock> vHeaders;
-            bool fRevertToInv = ((!state.fPreferHeaders &&
+            bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
+            bool fRevertToInv = (canHandlePoSHeaders == false ||
+				(!state.fPreferHeaders &&
                                  (!state.fPreferHeaderAndIDs || pto->vBlockHashesToAnnounce.size() > 1)) ||
                                 pto->vBlockHashesToAnnounce.size() > MAX_BLOCKS_TO_ANNOUNCE);
             const CBlockIndex *pBestIndex = nullptr; // last header queued for delivery
