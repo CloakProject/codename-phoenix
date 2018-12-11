@@ -2286,6 +2286,7 @@ bool CConnman::Start(CScheduler& scheduler, const Options& connOptions)
         return false;
     }
 
+    if (connOptions.m_specified_outgoing.empty())
     for (const auto& strDest : connOptions.vSeedNodes) {
         AddOneShot(strDest);
     }
@@ -2305,8 +2306,10 @@ bool CConnman::Start(CScheduler& scheduler, const Options& connOptions)
             DumpAddresses();
         }
     }
+
     if (clientInterface)
         clientInterface->InitMessage(_("Loading banlist..."));
+
     // Load addresses from banlist.dat
     nStart = GetTimeMillis();
     CBanDB bandb;

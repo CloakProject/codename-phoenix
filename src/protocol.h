@@ -238,6 +238,12 @@ extern const char *GETBLOCKTXN;
  * @since protocol version 70014 as described by BIP 152
  */
 extern const char *BLOCKTXN;
+/**
+* Contains an Enigma Annoucement.
+* Sent to announce our Enigma processing status to the Cloak network.
+* @since protocol version 60018
+*/
+extern const char* ENG_ANNOUNCEMENT;
 };
 
 /* Get a vector of all valid message types (see above) */
