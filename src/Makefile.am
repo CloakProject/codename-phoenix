@@ -403,6 +403,7 @@ crypto_libbitcoin_crypto_base_a_SOURCES = \
   crypto/hmac_sha256.cpp \
   crypto/hmac_sha256.h \
   crypto/hmac_sha512.cpp \
+  crypto/hmac_sha512.h \
   crypto/sha512.h \
   crypto/aes_helper.c \  
   crypto/blake.c \
