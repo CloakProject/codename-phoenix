@@ -78,13 +78,13 @@ public:
         consensus.BIP66Height = 363725; // Strict DER signatures [Consensus (soft fork)] - forced far into future for now
 
         // Proof of stake
-        consensus.nProofOfStakeLimit = UintToArith256(uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
+        consensus.nProofOfStakeLimit = ~arith_uint256("0") >> 2;
         consensus.nStakeMinAge = 60 * 60 * 1 * 1; // 1h, minimum age for coin age:  6h
         consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight:  4d 60*60*24*1
         consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
 
         // Proof of work
-        consensus.nProofOfWorkLimit = UintToArith256(uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
+        consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 20;
         consensus.nPowTargetTimespan = 60 * 30; // 30 blocks
         consensus.nPowTargetSpacing = 3 * consensus.nStakeTargetSpacing;
         consensus.fPowAllowMinDifficultyBlocks = false;
@@ -242,11 +242,6 @@ public:
         consensus.BIP34Hash = uint256S("0x0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8");
         consensus.BIP65Height = 581885; // 00000000007f6655f22f98e72ed80d8b06dc761d5da09df0fa1dc4be4f861eb6
         consensus.BIP66Height = 330776; // 000000002104c8c45e99a8853285a3b592602a3ccde2b832481da85e9e4ba182
-        consensus.nProofOfWorkLimit = UintToArith256(uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
-        consensus.nPowTargetTimespan = 3.5 * 24 * 60 * 60; // 3.5 days
-        consensus.nPowTargetSpacing = 2.5 * 60;
-        consensus.fPowAllowMinDifficultyBlocks = true;
-        consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 1512; // 75% for testchains
         consensus.nMinerConfirmationWindow = 2016;       // nPowTargetTimespan / nPowTargetSpacing
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
@@ -254,10 +249,17 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999;   // December 31, 2008
 
         // Proof of stake
-        consensus.nProofOfStakeLimit = UintToArith256(uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
+        consensus.nProofOfStakeLimit = ~arith_uint256("0") >> 2;
         consensus.nStakeMinAge = 60 * 60 * 1 * 1; // 1h, minimum age for coin age:  6h
         consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight:  4d 60*60*24*1
         consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
+
+        // Proof of work
+        consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 2;
+        consensus.nPowTargetTimespan = 60 * 30; // 30 blocks
+        consensus.nPowTargetSpacing = 3 * consensus.nStakeTargetSpacing;
+        consensus.fPowAllowMinDifficultyBlocks = false;
+        consensus.fPowNoRetargeting = false;
 
         // Deployment of BIP68, BIP112, and BIP113.
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
