@@ -185,7 +185,10 @@ private:
 
 public:
     CChain chainActive;
-    // BlockMap mapBlockIndex;
+
+    BlockMap mapOrphanBlocks; // for pos v1
+    BlockMap mapOrphanBlocksByPrev; // for pos v1
+
     std::multimap<CBlockIndex*, CBlockIndex*> mapBlocksUnlinked;
     CBlockIndex *pindexBestInvalid = nullptr;
 
@@ -244,6 +247,8 @@ private:
 } g_chainstate;
 
 
+BlockMap& mapOrphanBlocks = g_chainstate.mapOrphanBlocks; // for pos v1
+BlockMap& mapOrphanBlocksByPrev = g_chainstate.mapOrphanBlocksByPrev; // for pos v1
 
 CBlockIndex *pindexBestHeader = nullptr;
 Mutex g_best_block_mutex;
@@ -2081,11 +2086,16 @@ unsigned int ComputedMinStake(unsigned int nBase, int64_t nTime, unsigned int nB
 
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
+    std::string xxx1 = Params().ProofOfStakeLimit().GetHex();
+    std::string xxx2 = Params().ProofOfWorkLimit().GetHex();
+
     // Proof-of-Stake blocks has own target limit since nVersion=3 supermajority on mainNet and always on testNet
     arith_uint256 bnTargetLimit = fProofOfStake ? Params().ProofOfStakeLimit() : Params().ProofOfWorkLimit();
     
-    if (pindexLast == NULL)
+    if (pindexLast == NULL) {
+        unsigned int xxxx = bnTargetLimit.GetCompact();
         return bnTargetLimit.GetCompact(); // genesis block
+    }
 
     const CBlockIndex* pindexPrev = GetLastBlockIndex(pindexLast, fProofOfStake);
     if (pindexPrev->pprev == NULL)
@@ -2213,6 +2223,12 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
         return state.DoS(1, error("ConnectBlock() : incorrect %s at height %d (%d)", !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev ? pindex->pprev->nHeight : 0, block.nBits), REJECT_INVALID, "bad-diffbits");
     }
 
+    // ppcoin: check proof-of-stake
+    // Limited duplicity on stake: prevents block flood attack
+    // Duplicate stake allowed only when there is orphan child block
+    if (block.IsProofOfStake() && setStakeSeen.count(block.GetProofOfStake()) && !mapOrphanBlocksByPrev.count(blockHash))
+        return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
+
     // Check it again in case a previous version let a bad block in
     // NOTE: We don't currently (re-)invoke ContextualCheckBlock() or
     // ContextualCheckBlockHeader() here. This means that if we add a new
@@ -2237,24 +2253,6 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     }
     
     arith_uint256 hashProof;
-
-    // ppcoin: verify hash target and signature of coinstake tx
-    if (block.IsProofOfStake())
-    {
-        uint256 hashProofOfStake = uint256();
-        if (!CheckProofOfStake(block.vtx[1], block.nBits, hashProofOfStake))
-        {
-            printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", blockHash.ToString().c_str());
-
-            // Re-request 'em immediately -- see Peershares codebase, pull request #110
-            //if (pfrom)
-            //    pfrom->PushGetBlocks(pindexBest, pblock->GetHash());
-
-            return false; // do not error here as we expect this during initial block download
-        }
-        if (!mapProofOfStake.count(blockHash)) // add to mapProofOfStake
-            mapProofOfStake.insert(std::make_pair(blockHash, hashProofOfStake));
-    }
 
     if (block.IsProofOfWork())
     {
@@ -4029,7 +4027,6 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
 
     if (hash != chainparams.GetConsensus().hashGenesisBlock) {
         if (miSelf != m_block_index.end()) {
-
             // Block header is already known.
             pindex = miSelf->second;
             if (ppindex)
@@ -4165,7 +4162,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     CBlockIndex *pindexDummy = nullptr;
     CBlockIndex *&pindex = ppindex ? *ppindex : pindexDummy;
 
-    if (!AcceptBlockHeader(block, state, chainparams, &pindex, !pblock->IsProofOfStake()))
+    if (!AcceptBlockHeader(block, state, chainparams, &pindex, !fIsProofOfStake))
         return false;
 
     // Try to process all requested blocks that we don't have, but only
@@ -4239,6 +4236,12 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
     AssertLockNotHeld(cs_main);
 
     {
+        uint256 blockHash = pblock->GetHash();
+        if (mapBlockIndex.find(blockHash) != mapBlockIndex.end())
+            return error("ProcessBlock() : already have block %d %s", mapBlockIndex[blockHash]->nHeight, blockHash.ToString().substr(0, 20).c_str());
+        if (mapOrphanBlocks.find(blockHash) != mapOrphanBlocks.end())
+            return error("ProcessBlock() : already have block (orphan) %s", blockHash.ToString().substr(0, 20).c_str());
+
         CBlockIndex *pindex = nullptr;
         if (fNewBlock) *fNewBlock = false;
         BlockValidationState state;

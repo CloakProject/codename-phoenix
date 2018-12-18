@@ -33,6 +33,7 @@
 
 #include <memory>
 #include <typeinfo>
+#include <pos.h>
 
 /** Expiration time for orphan transactions in seconds */
 static constexpr int64_t ORPHAN_TX_EXPIRE_TIME = 20 * 60;
@@ -3512,7 +3513,6 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             vRecv >> b;
             headers[n] = b.GetBlockHeader();
            // int size = ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
-            int xx = 1;
         }
 
         return ProcessHeadersMessage(pfrom, headers, /*via_compact_block=*/false);
@@ -3544,7 +3544,32 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             mapBlockSource.emplace(hash, std::make_pair(pfrom.GetId(), true));
         }
         bool fNewBlock = false;
-        ProcessNewBlock(m_chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+
+        // ppcoin: verify hash target and signature of coinstake tx
+        // TODO: implement PoS properly
+        if (pblock->IsProofOfStake()) {
+            uint256 hashProofOfStake = uint256();
+            if (!CheckProofOfStake(pblock->vtx[1], pblock->nBits, hashProofOfStake)) {
+                //if (IsInitialBlockDownload() == false)
+                //{
+                //    printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", pblock->GetHash().ToString().c_str());
+                //    /*
+                //    // Re-request 'em immediately -- see Peershares codebase, pull request #110
+                //    if (pfrom)
+                //    {
+                //        std::vector<CInv> invs;
+                //        invs.push_back(CInv(MSG_BLOCK, pblock->GetHash()));
+                //        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
+                //    }*/
+                //}
+            } else {
+                ProcessNewBlock(m_chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+            }
+            if (!mapProofOfStake.count(pblock->GetHash())) // add to mapProofOfStake
+                mapProofOfStake.insert(std::make_pair(pblock->GetHash(), hashProofOfStake));
+        } else {
+            ProcessNewBlock(m_chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+        }
         if (fNewBlock) {
             pfrom.nLastBlockTime = GetTime();
         } else {
@@ -4219,7 +4244,9 @@ bool PeerManager::SendMessages(CNode* pto)
             // add all to the inv queue.
             LOCK(pto->cs_inventory);
             std::vector<CBlock> vHeaders;
-            bool fRevertToInv = ((!state.fPreferHeaders &&
+            bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
+            bool fRevertToInv = (canHandlePoSHeaders == false ||
+				(!state.fPreferHeaders &&
                                  (!state.fPreferHeaderAndIDs || pto->vBlockHashesToAnnounce.size() > 1)) ||
                                 pto->vBlockHashesToAnnounce.size() > MAX_BLOCKS_TO_ANNOUNCE);
             const CBlockIndex *pBestIndex = nullptr; // last header queued for delivery

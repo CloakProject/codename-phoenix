@@ -14,8 +14,11 @@ static const int PROTOCOL_VERSION = 70016;
 //! initial proto version, to be increased after version/verack negotiation
 static const int INIT_PROTO_VERSION = 60018;
 
+// min protocol version that correctly supports PoS headers
+static const int VERSION_GETHEADERS_POS = 60020;
+
 //! In this version, 'getheaders' was introduced.
-static const int GETHEADERS_VERSION = 60018;
+static const int GETHEADERS_VERSION = 60020;
 
 //! disconnect from peers older than this proto version
 static const int MIN_PEER_PROTO_VERSION = INIT_PROTO_VERSION;
