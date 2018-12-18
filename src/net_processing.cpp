@@ -4219,9 +4219,7 @@ bool PeerManager::SendMessages(CNode* pto)
             // add all to the inv queue.
             LOCK(pto->cs_inventory);
             std::vector<CBlock> vHeaders;
-            bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
-            bool fRevertToInv = (canHandlePoSHeaders == false ||
-				(!state.fPreferHeaders &&
+            bool fRevertToInv = ((!state.fPreferHeaders &&
                                  (!state.fPreferHeaderAndIDs || pto->vBlockHashesToAnnounce.size() > 1)) ||
                                 pto->vBlockHashesToAnnounce.size() > MAX_BLOCKS_TO_ANNOUNCE);
             const CBlockIndex *pBestIndex = nullptr; // last header queued for delivery

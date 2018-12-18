@@ -4027,32 +4027,8 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
     BlockMap::iterator miSelf = m_block_index.find(hash);
     CBlockIndex *pindex = nullptr;
 
-    std::string hashx = block.GetHash().GetHex();
-
-    if (hashx == "39969c3daad80c97a81358e8dbcd34e813fe2f8eefe432fffee7035c294f1a90")
-    {
-        int xfdfdf = 1;
-    }
-
-    // BlockMap::iterator miEnd = mapBlockIndex.end();
-
     if (hash != chainparams.GetConsensus().hashGenesisBlock) {
         if (miSelf != m_block_index.end()) {
-        // if (miSelf != miEnd) {
-
-        //     typedef std::map<std::string, std::pair<std::string, int> > inner_map;
-        //     typedef std::pair<bool, inner_map> map_entry;
-
-        //     int idx = 0;
-        //     for (BlockMap::iterator it = mapBlockIndex.begin(); it != mapBlockIndex.end(); ++it)
-        //     {
-        //         std::string hashxx = it->first.GetHex();
-        //         if (hashx == hashxx)
-        //         {
-        //             int xxdfadsfg = 1;
-        //         }
-        //         idx++;
-        //     }
 
             // Block header is already known.
             pindex = miSelf->second;
@@ -4189,7 +4165,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     CBlockIndex *pindexDummy = nullptr;
     CBlockIndex *&pindex = ppindex ? *ppindex : pindexDummy;
 
-    if (!AcceptBlockHeader(block, state, chainparams, &pindex, pblock->IsProofOfStake()))
+    if (!AcceptBlockHeader(block, state, chainparams, &pindex, !pblock->IsProofOfStake()))
         return false;
 
     // Try to process all requested blocks that we don't have, but only
