@@ -1995,25 +1995,14 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
 
             if (inv.type == MSG_BLOCK) {
                 UpdateBlockAvailability(pfrom->GetId(), inv.hash);
-                bool canHandlePoSHeaders = pfrom->nVersion >= VERSION_GETHEADERS_POS;
                 if (!fAlreadyHave && !fImporting && !fReindex && !mapBlocksInFlight.count(inv.hash)) {
-                    if (canHandlePoSHeaders)
-                    {
-                        // We used to request the full block here, but since headers-announcements are now the
-                        // primary method of announcement on the network, and since, in the case that a node
-                        // fell back to inv we probably have a reorg which we should get the headers for first,
-                        // we now only provide a getheaders response here. When we receive the headers, we will
-                        // then ask for the blocks we need.
-                        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), inv.hash));
-                        LogPrint(BCLog::NET, "getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->GetId());
-                    }
-                    else
-                    {
-                        // older client, getdata->block
-                        std::vector<CInv> invs;
-                        invs.push_back(CInv(MSG_BLOCK, inv.hash));
-                        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
-                    }
+                    // We used to request the full block here, but since headers-announcements are now the
+                    // primary method of announcement on the network, and since, in the case that a node
+                    // fell back to inv we probably have a reorg which we should get the headers for first,
+                    // we now only provide a getheaders response here. When we receive the headers, we will
+                    // then ask for the blocks we need.
+                    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), inv.hash));
+                    LogPrint(BCLog::NET, "getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->GetId());
                 }
 
                 if (inv.hash.GetHex() == "9cd16b4fbb0a11783767cbae5d5c52a7b92f61d8c320031b3968eb4b6c001115 ")
@@ -3396,9 +3385,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
         // Start block sync
         if (pindexBestHeader == nullptr)
             pindexBestHeader = chainActive.Tip();
-
-        bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
-
+        
         bool fFetch = state.fPreferredDownload || nPreferredDownload == 0 && !pto->fClient && !pto->fOneShot; // Download if this is a nice peer, or we have no nice peers and this one might do.
         if (!state.fSyncStarted && !pto->fClient && !fImporting && !fReindex) {
             // Only actively request headers from a single peer, unless we're close to today.
@@ -3417,16 +3404,8 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                 if (pindexStart->pprev)
                     pindexStart = pindexStart->pprev;
 
-                if (canHandlePoSHeaders)
-                {
-                    LogPrint(BCLog::NET, "initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->GetId(), pto->nStartingHeight);
-                    connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexStart), uint256()));
-                }else
-                {
-                    // older client, revert to using getblocks
-                    connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETBLOCKS, chainActive.GetLocator(pindexStart), uint256()));
-                    LogPrint(BCLog::NET, "getblocks (%d) to peer=%d\n", pindexStart->nHeight, pto->GetId());
-                }
+                LogPrint(BCLog::NET, "initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->GetId(), pto->nStartingHeight);
+                connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexStart), uint256()));
             }
         }
 
@@ -3451,9 +3430,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
             // add all to the inv queue.
             LOCK(pto->cs_inventory);
             std::vector<CBlock> vHeaders;
-            bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
-            bool fRevertToInv = (canHandlePoSHeaders == false ||
-				(!state.fPreferHeaders &&
+            bool fRevertToInv = ((!state.fPreferHeaders &&
                                  (!state.fPreferHeaderAndIDs || pto->vBlockHashesToAnnounce.size() > 1)) ||
                                 pto->vBlockHashesToAnnounce.size() > MAX_BLOCKS_TO_ANNOUNCE);
             const CBlockIndex *pBestIndex = nullptr; // last header queued for delivery
