@@ -87,7 +87,7 @@ static bool SelectBlockFromCandidates(
     const CBlockIndex** pindexSelected)
 {
     bool fSelected = false;
-    uint256 hashBest = uint256();
+    arith_uint256 hashBest = arith_uint256();
     *pindexSelected = (const CBlockIndex*)0;
     for each(const std::pair<int64_t, uint256>& item in vSortedByTimestamp)
     {
@@ -103,7 +103,7 @@ static bool SelectBlockFromCandidates(
         uint256 hashProof = pindex->IsProofOfStake() ? ArithToUint256(pindex->hashProofOfStake) : pindex->GetBlockHash();
         CDataStream ss(SER_GETHASH, 0);
         ss << hashProof << nStakeModifierPrev;
-        uint256 hashSelection = Hash(ss.begin(), ss.end());
+        arith_uint256 hashSelection = UintToArith256(Hash(ss.begin(), ss.end()));
         // the selection hash is divided by 2**32 so that proof-of-stake block
         // is always favored over proof-of-work block. this is to preserve
         // the energy efficiency property
@@ -236,11 +236,11 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
     if (pindex->pprev)
         ss << pindex->pprev->nStakeModifierChecksum;
     ss << pindex->nFlags << pindex->hashProofOfStake << pindex->nStakeModifier;
-    uint256 hashChecksum = Hash(ss.begin(), ss.end());
+    arith_uint256 hashChecksum = UintToArith256(Hash(ss.begin(), ss.end()));
     hashChecksum >>= (256 - 32);
     if (gArgs.GetBoolArg("-printstakemodifier", false))
-        LogPrint(BCLog::ALL, "stake checksum : 0x % 016x", hashChecksum.GetUint64(0));
-    return hashChecksum.GetUint64(0);
+        LogPrint(BCLog::ALL, "stake checksum : 0x % 016x", ArithToUint256(hashChecksum).GetUint64(0));
+    return hashChecksum.GetLow64();
 }
 
 // The stake modifier used to hash for a stake kernel is chosen as the stake
