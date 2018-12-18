@@ -27,6 +27,8 @@ void SetMockTime(int64_t nMockTimeIn);
 int64_t GetMockTime();
 void MilliSleep(int64_t n);
 
+std::string DateTimeStrFormat(const char* pszFormat, int64_t nTime);
+
 /**
  * ISO 8601 formatting is preferred. Use the FormatISO8601{DateTime,Date,Time}
  * helper functions if possible.
