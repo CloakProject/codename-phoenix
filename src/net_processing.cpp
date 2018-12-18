@@ -30,6 +30,7 @@
 #include <utilstrencodings.h>
 
 #include <memory>
+#include <pos.h>
 
 #if defined(NDEBUG)
 # error "Bitcoin cannot be compiled without assertions."
@@ -1577,8 +1578,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         LogPrintf("dropmessagestest DROPPING RECV MESSAGE\n");
         return true;
     }
-
-
+    
     if (!(pfrom->GetLocalServices() & NODE_BLOOM) &&
               (strCommand == NetMsgType::FILTERLOAD ||
                strCommand == NetMsgType::FILTERADD))
@@ -1948,7 +1948,6 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         }
     }
 
-
     else if (strCommand == NetMsgType::INV)
     {
         std::vector<CInv> vInv;
@@ -1995,14 +1994,25 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
 
             if (inv.type == MSG_BLOCK) {
                 UpdateBlockAvailability(pfrom->GetId(), inv.hash);
+                bool canHandlePoSHeaders = pfrom->nVersion >= VERSION_GETHEADERS_POS;
                 if (!fAlreadyHave && !fImporting && !fReindex && !mapBlocksInFlight.count(inv.hash)) {
-                    // We used to request the full block here, but since headers-announcements are now the
-                    // primary method of announcement on the network, and since, in the case that a node
-                    // fell back to inv we probably have a reorg which we should get the headers for first,
-                    // we now only provide a getheaders response here. When we receive the headers, we will
-                    // then ask for the blocks we need.
-                    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), inv.hash));
-                    LogPrint(BCLog::NET, "getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->GetId());
+                    if (canHandlePoSHeaders)
+                    {
+                        // We used to request the full block here, but since headers-announcements are now the
+                        // primary method of announcement on the network, and since, in the case that a node
+                        // fell back to inv we probably have a reorg which we should get the headers for first,
+                        // we now only provide a getheaders response here. When we receive the headers, we will
+                        // then ask for the blocks we need.
+                        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), inv.hash));
+                        LogPrint(BCLog::NET, "getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, inv.hash.ToString(), pfrom->GetId());
+                    }
+                    else
+                    {
+                        // older client, getdata->block
+                        std::vector<CInv> invs;
+                        invs.push_back(CInv(MSG_BLOCK, inv.hash));
+                        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
+                    }
                 }
 
                 if (inv.hash.GetHex() == "9cd16b4fbb0a11783767cbae5d5c52a7b92f61d8c320031b3968eb4b6c001115 ")
@@ -2012,8 +2022,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
 
                 if (nInv == nLastBlock)
                 {
-                    //connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETBLOCKS, chainActive.GetLocator(mapBlockIndex[inv.hash]), uint256()));
-                    //LogPrint(BCLog::NET, "getblocks (%d) to peer=%d\n", pindexBestHeader->nHeight, pfrom->GetId());
+                    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETBLOCKS, chainActive.GetLocator(mapBlockIndex[inv.hash]), uint256()));
+                    LogPrint(BCLog::NET, "getblocks (%d) to peer=%d\n", pindexBestHeader->nHeight, pfrom->GetId());
                 }
             }
             else
@@ -2023,7 +2033,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                     LogPrint(BCLog::NET, "transaction (%s) inv sent in violation of protocol peer=%d\n", inv.hash.ToString(), pfrom->GetId());
                 }
                 else if (!fAlreadyHave && !fImporting && !fReindex && !IsInitialBlockDownload()) {
-                    pfrom->AskFor(inv);
+                    pfrom->AskFor(inv, IsInitialBlockDownload());
                 }
             }
             nInv++;
@@ -2740,7 +2750,6 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             vRecv >> b;
             headers[n] = b.GetBlockHeader();
            // int size = ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
-            int xx = 1;
         }
 
         // Headers received via a HEADERS message should be valid, and reflect
@@ -2771,7 +2780,35 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             mapBlockSource.emplace(hash, std::make_pair(pfrom->GetId(), true));
         }
         bool fNewBlock = false;
-        ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+
+        // ppcoin: verify hash target and signature of coinstake tx
+        if (pblock->IsProofOfStake())
+        {
+            uint256 hashProofOfStake = uint256();
+            if (!CheckProofOfStake(pblock->vtx[1], pblock->nBits, hashProofOfStake))
+            {
+                //if (IsInitialBlockDownload() == false)
+                //{
+                //    printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", pblock->GetHash().ToString().c_str());
+                //    /*
+                //    // Re-request 'em immediately -- see Peershares codebase, pull request #110
+                //    if (pfrom)
+                //    {
+                //        std::vector<CInv> invs;
+                //        invs.push_back(CInv(MSG_BLOCK, pblock->GetHash()));
+                //        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
+                //    }*/
+                //}
+            }else
+            {
+                ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+            }
+            if (!mapProofOfStake.count(pblock->GetHash())) // add to mapProofOfStake
+                mapProofOfStake.insert(std::make_pair(pblock->GetHash(), hashProofOfStake));
+        }else
+        {
+            ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+        }
         if (fNewBlock) {
             pfrom->nLastBlockTime = GetTime();
         } else {
@@ -2779,7 +2816,6 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             mapBlockSource.erase(pblock->GetHash());
         }
     }
-
 
     else if (strCommand == NetMsgType::GETADDR)
     {
@@ -3385,7 +3421,9 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
         // Start block sync
         if (pindexBestHeader == nullptr)
             pindexBestHeader = chainActive.Tip();
-        
+
+        bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
+
         bool fFetch = state.fPreferredDownload || nPreferredDownload == 0 && !pto->fClient && !pto->fOneShot; // Download if this is a nice peer, or we have no nice peers and this one might do.
         if (!state.fSyncStarted && !pto->fClient && !fImporting && !fReindex) {
             // Only actively request headers from a single peer, unless we're close to today.
@@ -3404,8 +3442,16 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                 if (pindexStart->pprev)
                     pindexStart = pindexStart->pprev;
 
-                LogPrint(BCLog::NET, "initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->GetId(), pto->nStartingHeight);
-                connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexStart), uint256()));
+                if (canHandlePoSHeaders)
+                {
+                    LogPrint(BCLog::NET, "initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->GetId(), pto->nStartingHeight);
+                    connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexStart), uint256()));
+                }else
+                {
+                    // older client, revert to using getblocks
+                    connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETBLOCKS, chainActive.GetLocator(pindexStart), uint256()));
+                    LogPrint(BCLog::NET, "getblocks (%d) to peer=%d\n", pindexStart->nHeight, pto->GetId());
+                }
             }
         }
 
@@ -3430,7 +3476,9 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
             // add all to the inv queue.
             LOCK(pto->cs_inventory);
             std::vector<CBlock> vHeaders;
-            bool fRevertToInv = ((!state.fPreferHeaders &&
+            bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
+            bool fRevertToInv = (canHandlePoSHeaders == false ||
+				(!state.fPreferHeaders &&
                                  (!state.fPreferHeaderAndIDs || pto->vBlockHashesToAnnounce.size() > 1)) ||
                                 pto->vBlockHashesToAnnounce.size() > MAX_BLOCKS_TO_ANNOUNCE);
             const CBlockIndex *pBestIndex = nullptr; // last header queued for delivery
