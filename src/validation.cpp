@@ -2210,7 +2210,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
 
     // Check proof of stake
     if (block.nBits != GetNextTargetRequired(pindex->pprev, block.IsProofOfStake())) {
-        return state.DoS(1, error("ContextualCConnectBlockheckBlock() : incorrect %s at height %d (%d)", !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev->nHeight, block.nBits), REJECT_INVALID, "bad-diffbits");
+        return state.DoS(1, error("ConnectBlock() : incorrect %s at height %d (%d)", !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev ? pindex->pprev->nHeight : 0, block.nBits), REJECT_INVALID, "bad-diffbits");
     }
 
     // Check it again in case a previous version let a bad block in
