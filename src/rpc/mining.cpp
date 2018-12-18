@@ -128,7 +128,7 @@ static bool GenerateBlock(ChainstateManager& chainman, CBlock& block, uint64_t& 
     }
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    if (!chainman.ProcessNewBlock(chainparams, shared_pblock, true, nullptr)) {
+    if (!ProcessNewBlock(Params(), shared_pblock, true, shared_pblock->IsProofOfStake(), nullptr)) {
         throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
     }
 
@@ -944,10 +944,6 @@ static RPCHelpMan submitblock()
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
     }
 
-    if (block.vtx.empty() || !block.vtx[0]->IsCoinBase()) {
-        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block does not start with a coinbase");
-    }
-
     uint256 hash = block.GetHash();
     {
         LOCK(cs_main);
@@ -973,10 +969,14 @@ static RPCHelpMan submitblock()
     bool new_block;
     auto sc = std::make_shared<submitblock_StateCatcher>(block.GetHash());
     RegisterSharedValidationInterface(sc);
-    bool accepted = EnsureChainman(request.context).ProcessNewBlock(Params(), blockptr, /* fForceProcessing */ true, /* fNewBlock */ &new_block);
+    bool accepted = EnsureChainman(request.context).ProcessNewBlock(Params(), blockptr, /* fForceProcessing */ true, blockptr->IsProofOfStake(), /* fNewBlock */ &new_block);
     UnregisterSharedValidationInterface(sc);
     if (!new_block && accepted) {
         return "duplicate";
+    }
+    if (!new_block && !accepted) {
+        // TODO Maybe pass down fNewBlock to AcceptBlockHeader, so it is properly set to true in this case?
+        return "invalid";
     }
     if (!sc->found) {
         return "inconclusive";

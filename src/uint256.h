@@ -46,7 +46,41 @@ public:
     friend inline bool operator==(const base_blob& a, const base_blob& b) { return a.Compare(b) == 0; }
     friend inline bool operator!=(const base_blob& a, const base_blob& b) { return a.Compare(b) != 0; }
     friend inline bool operator<(const base_blob& a, const base_blob& b) { return a.Compare(b) < 0; }
-
+    
+    base_blob& operator<<=(unsigned int shift)
+    {
+        base_blob a(*this);
+	for (int i = 0; i < WIDTH; i++)
+		data[i] = 0;
+	int k = shift / 32;
+	shift = shift % 32;
+	for (int i = 0; i < WIDTH; i++)
+	{
+		if (i + k + 1 < WIDTH && shift != 0)
+			data[i + k + 1] |= (a.data[i] >> (32 - shift));
+		if (i + k < WIDTH)
+			data[i + k] |= (a.data[i] << shift);
+	}
+	return *this;
+    }
+    
+    base_blob& operator>>=(unsigned int shift)
+    {
+        base_blob a(*this);
+	for (int i = 0; i < WIDTH; i++)
+		data[i] = 0;
+	int k = shift / 32;
+	shift = shift % 32;
+	for (int i = 0; i < WIDTH; i++)
+	{
+		if (i - k - 1 >= 0 && shift != 0)
+			data[i - k - 1] |= (a.data[i] << (32 - shift));
+		if (i - k >= 0)
+			data[i - k] |= (a.data[i] >> shift);
+	}
+	return *this;
+    }
+    
     std::string GetHex() const;
     void SetHex(const char* psz);
     void SetHex(const std::string& str);
@@ -105,7 +139,7 @@ public:
         s.read((char*)m_data, sizeof(m_data));
     }
 	
-	friend class uint160;
+    friend class uint160;
     friend class uint256;
     friend class uint512;
 };

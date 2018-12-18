@@ -166,7 +166,8 @@ BOOST_AUTO_TEST_CASE(processnewblock_signals_ordering)
     BOOST_CHECK(Assert(m_node.chainman)->ProcessNewBlockHeaders(headers, state, Params()));
 
     // Connect the genesis block and drain any outstanding events
-    BOOST_CHECK(Assert(m_node.chainman)->ProcessNewBlock(Params(), std::make_shared<CBlock>(Params().GenesisBlock()), true, &ignored));
+    BOOST_CHECK(Assert(m_node.chainman)->ProcessNewBlock(Params(), std::make_shared<CBlock>(Params().GenesisBlock()), true, false, &ignored);
+
     SyncWithValidationInterfaceQueue();
 
     // subscribe to events (this subscriber will validate event ordering)
@@ -188,13 +189,13 @@ BOOST_AUTO_TEST_CASE(processnewblock_signals_ordering)
             FastRandomContext insecure;
             for (int i = 0; i < 1000; i++) {
                 auto block = blocks[insecure.randrange(blocks.size() - 1)];
-                Assert(m_node.chainman)->ProcessNewBlock(Params(), block, true, &ignored);
+                Assert(m_node.chainman)->ProcessNewBlock(Params(), block, true, block->IsProofOfStake(), &ignored);
             }
 
             // to make sure that eventually we process the full chain - do it here
             for (auto block : blocks) {
                 if (block->vtx.size() == 1) {
-                    bool processed = Assert(m_node.chainman)->ProcessNewBlock(Params(), block, true, &ignored);
+                    bool processed = Assert(m_node.chainman)->ProcessNewBlock(Params(), block, true, block->IsProofOfStake(), &ignored);
                     assert(processed);
                 }
             }

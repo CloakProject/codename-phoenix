@@ -2113,10 +2113,6 @@ static bool PrepareBlockFilterRequest(CNode& peer, const CChainParams& chain_par
         peer.fDisconnect = true;
         return false;
     }
-    if (strCommand == NetMsgType::ENG_ANNOUNCEMENT) {
-        // Enigma Announcement
-        return true;
-    }
 
     filter_index = GetBlockFilterIndex(filter_type);
     if (!filter_index) {
@@ -2678,6 +2674,14 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             return;
         }
 
+        // find last block in inv vector
+        // unsigned int nLastBlock = (unsigned int)(-1);
+        // for (unsigned int nInv = 0; nInv < vInv.size(); nInv++) {
+        //     if (vInv[vInv.size() - 1 - nInv].type == MSG_BLOCK) {
+        //         nLastBlock = vInv.size() - 1 - nInv;
+        //         break;
+        //     }
+        // }
         // We won't accept tx inv's if we're in blocks-only mode, or this is a
         // block-relay-only peer
         bool fBlocksOnly = !g_relay_txes || (pfrom.m_tx_relay == nullptr);
@@ -2694,7 +2698,6 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
 
         for (CInv& inv : vInv) {
             if (interruptMsgProc) return;
-
             // Ignore INVs that don't match wtxidrelay setting.
             // Note that orphan parent fetching always uses MSG_TX GETDATAs regardless of the wtxidrelay setting.
             // This is fine as no INV messages are involved in that process.
@@ -2709,6 +2712,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                 LogPrint(BCLog::NET, "got inv: %s  %s peer=%d\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom.GetId());
 
                 UpdateBlockAvailability(pfrom.GetId(), inv.hash);
+                bool canHandlePoSHeaders = pfrom->nVersion >= VERSION_GETHEADERS_POS;
                 if (!fAlreadyHave && !fImporting && !fReindex && !mapBlocksInFlight.count(inv.hash)) {
                     // Headers-first is the primary method of announcement on
                     // the network. If a node fell back to sending blocks by inv,
@@ -2727,7 +2731,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                     LogPrint(BCLog::NET, "transaction (%s) inv sent in violation of protocol, disconnecting peer=%d\n", inv.hash.ToString(), pfrom.GetId());
                     pfrom.fDisconnect = true;
                     return;
-                } else if (!fAlreadyHave && !m_chainman.ActiveChainstate().IsInitialBlockDownload()) {
+                } else if (!fAlreadyHave && !fImporting && !fReindex && !m_chainman.ActiveChainstate().IsInitialBlockDownload()) {
                     AddTxAnnouncement(pfrom, gtxid, current_time);
                 }
             } else {
@@ -2736,8 +2740,15 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         }
 
         if (best_block != nullptr) {
-            m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETHEADERS, ::ChainActive().GetLocator(pindexBestHeader), *best_block));
-            LogPrint(BCLog::NET, "getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, best_block->ToString(), pfrom.GetId());
+            if (canHandlePoSHeaders) {
+                m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETHEADERS, ::ChainActive().GetLocator(pindexBestHeader), *best_block));
+                LogPrint(BCLog::NET, "getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, best_block->ToString(), pfrom.GetId());
+            } else {
+                // older client, getdata->block
+                std::vector<CInv> invs;
+                invs.push_back(CInv(MSG_BLOCK, inv.hash));
+                m_connman->PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
+            }
         }
 
         return;
@@ -2764,6 +2775,12 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             ProcessGetData(pfrom, *peer, m_chainparams, m_connman, m_mempool, interruptMsgProc);
         }
 
+        return;
+    }
+
+    if (msg_type == NetMsgType::ENG_ANNOUNCEMENT) {
+        // Enigma Announcement
+        LogPrint(BCLog::NET, "Received Enigma Announcment message from peer %d\n", pfrom.GetId());
         return;
     }
 
@@ -3351,14 +3368,8 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             // relayed before full validation (see BIP 152), so we don't want to disconnect
             // the peer if the header turns out to be for an invalid block.
             // Note that if a peer tries to build on an invalid chain, that
-<<<<<<< HEAD
             // will be detected and the peer will be disconnected/discouraged.
             return ProcessHeadersMessage(pfrom, {cmpctblock.header}, /*via_compact_block=*/true);
-=======
-            // will be detected and the peer will be banned.
-            bool success = ProcessHeadersMessage(pfrom, connman, {cmpctblock.header}, chainparams, /*punish_duplicate_invalid=*/false);
-            return success;
->>>>>>> 12be17867 (Add Enigma annoucement message skeleton.)
         }
 
         if (fBlockReconstructed) {
@@ -3378,7 +3389,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             // we have a chain with at least nMinimumChainWork), and we ignore
             // compact blocks with less work than our tip, it is safe to treat
             // reconstructed compact blocks as having been requested.
-            m_chainman.ProcessNewBlock(m_chainparams, pblock, /*fForceProcessing=*/true, &fNewBlock);
+            ProcessNewBlock(m_chainparams, pblock, /*fForceProcessing=*/true, pblock->IsProofOfStake(), &fNewBlock);
             if (fNewBlock) {
                 pfrom.nLastBlockTime = GetTime();
             } else {
@@ -3468,7 +3479,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             // disk-space attacks), but this should be safe due to the
             // protections in the compact block handler -- see related comment
             // in compact block optimistic reconstruction handling.
-            m_chainman.ProcessNewBlock(m_chainparams, pblock, /*fForceProcessing=*/true, &fNewBlock);
+            ProcessNewBlock(m_chainparams, pblock, /*fForceProcessing=*/true, pblock->IsProofOfStake(), &fNewBlock);
             if (fNewBlock) {
                 pfrom.nLastBlockTime = GetTime();
             } else {
@@ -3504,17 +3515,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             int xx = 1;
         }
 
-<<<<<<< HEAD
         return ProcessHeadersMessage(pfrom, headers, /*via_compact_block=*/false);
-=======
-        // Headers received via a HEADERS message should be valid, and reflect
-        // the chain the peer is on. If we receive a known-invalid header,
-        // disconnect the peer if it is using one of our outbound connection
-        // slots.
-        bool should_punish = !pfrom->fInbound && !pfrom->m_manual_connection;
-        bool success = ProcessHeadersMessage(pfrom, connman, headers, chainparams, should_punish);
-        return success;
->>>>>>> 12be17867 (Add Enigma annoucement message skeleton.)
     }
 
     if (msg_type == NetMsgType::BLOCK)
@@ -3543,7 +3544,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             mapBlockSource.emplace(hash, std::make_pair(pfrom.GetId(), true));
         }
         bool fNewBlock = false;
-        m_chainman.ProcessNewBlock(m_chainparams, pblock, forceProcessing, &fNewBlock);
+        ProcessNewBlock(m_chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
         if (fNewBlock) {
             pfrom.nLastBlockTime = GetTime();
         } else {
@@ -4173,16 +4174,10 @@ bool PeerManager::SendMessages(CNode* pto)
 
         // Start block sync
         if (pindexBestHeader == nullptr)
-<<<<<<< HEAD
             pindexBestHeader = ::ChainActive().Tip();
-        bool fFetch = state.fPreferredDownload || (nPreferredDownload == 0 && !pto->fClient && !pto->IsAddrFetchConn()); // Download if this is a nice peer, or we have no nice peers and this one might do.
-=======
-            pindexBestHeader = chainActive.Tip();
-
         bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
-
-        bool fFetch = state.fPreferredDownload || nPreferredDownload == 0 && !pto->fClient && !pto->fOneShot; // Download if this is a nice peer, or we have no nice peers and this one might do.
->>>>>>> 12be17867 (Add Enigma annoucement message skeleton.)
+        bool fFetch = state.fPreferredDownload || (nPreferredDownload == 0 && !pto->fClient && !pto->IsAddrFetchConn()); // Download if this is a nice peer, or we have no nice peers and this one might do.
+        
         if (!state.fSyncStarted && !pto->fClient && !fImporting && !fReindex) {
             // Only actively request headers from a single peer, unless we're close to today.
             if ((nSyncStarted == 0 && fFetch) || pindexBestHeader->GetBlockTime() > GetAdjustedTime() - 24 * 60 * 60) {
@@ -4199,8 +4194,15 @@ bool PeerManager::SendMessages(CNode* pto)
                    got back an empty response.  */
                 if (pindexStart->pprev)
                     pindexStart = pindexStart->pprev;
-                LogPrint(BCLog::NET, "initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->GetId(), pto->nStartingHeight);
-                m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETHEADERS, ::ChainActive().GetLocator(pindexStart), uint256()));
+
+                if (canHandlePoSHeaders) {
+                    LogPrint(BCLog::NET, "initial getheaders (%d) to peer=%d (startheight:%d)\n", pindexStart->nHeight, pto->GetId(), pto->nStartingHeight);
+                    m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETHEADERS, ::ChainActive().GetLocator(pindexStart), uint256()));
+                } else {
+                    // older client, revert to using getblocks
+                    LogPrint(BCLog::NET, "getblocks (%d) to peer=%d\n", pindexStart->nHeight, pto->GetId());
+                    m_connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETBLOCKS, ::ChainActive().GetLocator(pindexStart), uint256()));
+                }
             }
         }
 

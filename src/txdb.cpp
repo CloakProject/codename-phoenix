@@ -7,6 +7,7 @@
 
 #include <node/ui_interface.h>
 #include <pow.h>
+#include <pos.h>
 #include <random.h>
 #include <shutdown.h>
 #include <uint256.h>
@@ -16,6 +17,8 @@
 #include <util/vector.h>
 
 #include <stdint.h>
+
+#include <boost/thread.hpp>     // TODO: is this still needed ???
 
 static const char DB_COIN = 'C';
 static const char DB_COINS = 'c';
@@ -258,21 +261,24 @@ bool CBlockTreeDB::LoadBlockIndexGuts(const Consensus::Params& consensusParams, 
             if (pcursor->GetValue(diskindex)) {
                 // Construct block index object
                 CBlockIndex* pindexNew = insertBlockIndex(diskindex.GetBlockHash());
-                pindexNew->pprev          = insertBlockIndex(diskindex.hashPrev);
-                pindexNew->nHeight        = diskindex.nHeight;
-                pindexNew->nFile          = diskindex.nFile;
-                pindexNew->nDataPos       = diskindex.nDataPos;
-                pindexNew->nUndoPos       = diskindex.nUndoPos;
-                pindexNew->nVersion       = diskindex.nVersion;
-                pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;
-                pindexNew->nTime          = diskindex.nTime;
-                pindexNew->nBits          = diskindex.nBits;
-                pindexNew->nNonce         = diskindex.nNonce;
-                pindexNew->nStatus        = diskindex.nStatus;
-                pindexNew->nTx            = diskindex.nTx;
+                pindexNew->pprev            = insertBlockIndex(diskindex.hashPrev);
+                pindexNew->nHeight          = diskindex.nHeight;
+                pindexNew->nFile            = diskindex.nFile;
+                pindexNew->nDataPos         = diskindex.nDataPos;
+                pindexNew->nUndoPos         = diskindex.nUndoPos;
+                pindexNew->nVersion         = diskindex.nVersion;
+                pindexNew->hashMerkleRoot   = diskindex.hashMerkleRoot;
+                pindexNew->nTime            = diskindex.nTime;
+                pindexNew->nBits            = diskindex.nBits;
+                pindexNew->nNonce           = diskindex.nNonce;
+                pindexNew->nStatus          = diskindex.nStatus;
+                pindexNew->nTx              = diskindex.nTx;
 
-                if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits, consensusParams))
-                    return error("%s: CheckProofOfWork failed: %s", __func__, pindexNew->ToString());
+                pindexNew->nFlags           = diskindex.nFlags;
+                pindexNew->nStakeModifier   = diskindex.nStakeModifier;
+                pindexNew->prevoutStake     = diskindex.prevoutStake;
+                pindexNew->nStakeTime       = diskindex.nStakeTime;
+                pindexNew->hashProofOfStake = diskindex.hashProofOfStake;
 
                 pcursor->Next();
             } else {

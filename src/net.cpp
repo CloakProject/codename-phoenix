@@ -2990,7 +2990,7 @@ CNode::CNode(NodeId idIn, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn
 }
 
 CNode::~CNode()
-{
+{ 
     CloseSocket(hSocket);
 }
 

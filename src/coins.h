@@ -34,10 +34,11 @@ public:
     CTxOut out;
 
     //! whether containing transaction was a coinbase
-    unsigned int fCoinBase : 1;
+    bool fCoinBase;
+    bool fCoinStake;
 
     //! at which height this containing transaction was included in the active block chain
-    uint32_t nHeight : 31;
+    uint32_t nHeight;
 
     //! construct a Coin from a CTxOut and height/coinbase information.
     Coin(CTxOut&& outIn, int nHeightIn, bool fCoinBaseIn) : out(std::move(outIn)), fCoinBase(fCoinBaseIn), nHeight(nHeightIn) {}
@@ -46,14 +47,19 @@ public:
     void Clear() {
         out.SetNull();
         fCoinBase = false;
+        fCoinStake = false;
         nHeight = 0;
     }
 
     //! empty constructor
-    Coin() : fCoinBase(false), nHeight(0) { }
+    Coin() : fCoinBase(false), fCoinStake(false), nHeight(0) { }
 
     bool IsCoinBase() const {
         return fCoinBase;
+    }
+
+    bool IsCoinStake() const {
+        return fCoinStake;
     }
 
     template<typename Stream>

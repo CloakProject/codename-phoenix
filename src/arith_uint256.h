@@ -238,6 +238,23 @@ public:
      * value is zero.
      */
     unsigned int bits() const;
+    
+    unsigned int GetSerializeSize(int nType, int nVersion) const
+    {
+        return sizeof(pn);
+    }
+
+    template<typename Stream>
+    void Serialize(Stream& s) const
+    {
+        s.write((char*)pn, sizeof(pn));
+    }
+
+    template<typename Stream>
+    void Unserialize(Stream& s)
+    {
+        s.read((char*)pn, sizeof(pn));
+    }
 
     uint64_t GetLow64() const
     {

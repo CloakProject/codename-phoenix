@@ -91,6 +91,11 @@ public:
     const std::vector<SeedSpec6>& FixedSeeds() const { return vFixedSeeds; }
     const CCheckpointData& Checkpoints() const { return checkpointData; }
     const ChainTxData& TxData() const { return chainTxData; }
+    void UpdateVersionBitsParameters(Consensus::DeploymentPos d, int64_t nStartTime, int64_t nTimeout);
+    const arith_uint256& ProofOfWorkLimit() const { return consensus.nProofOfWorkLimit; }
+
+    // proof of stake
+    const arith_uint256& ProofOfStakeLimit() const { return consensus.nProofOfStakeLimit; }
 protected:
     CChainParams() {}
 

@@ -186,13 +186,13 @@ public:
     uint32_t nNonce{0};
 
     unsigned int nFlags; // ppcoin: block index flags
-
-    uint64_t nStakeModifier; // hash modifier for proof-of-stake
+    arith_uint256 hashProofOfStake;
 
     // proof-of-stake specific fields
+    uint64_t nStakeModifier; // hash modifier for proof-of-stake
+    unsigned int nStakeModifierChecksum; // checksum of index; in-memeory only
     COutPoint prevoutStake;
     unsigned int nStakeTime;
-    arith_uint256 hashProofOfStake;
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId{0};
@@ -412,7 +412,7 @@ public:
     }
 
     explicit CDiskBlockIndex(const CBlockIndex* pindex) : CBlockIndex(*pindex) {
-        hashPrev = (pprev ? pprev->GetBlockHash() : uint256());
+	    hashPrev = (pprev ? pprev->GetBlockHash() : uint256());
     }
 
     SERIALIZE_METHODS(CDiskBlockIndex, obj)
@@ -427,6 +427,19 @@ public:
         if (obj.nStatus & BLOCK_HAVE_DATA) READWRITE(VARINT(obj.nDataPos));
         if (obj.nStatus & BLOCK_HAVE_UNDO) READWRITE(VARINT(obj.nUndoPos));
 
+	READWRITE(nFlags);
+        READWRITE(nStakeModifier);
+	if (IsProofOfStake())
+	{
+	    READWRITE(prevoutStake);
+	    READWRITE(nStakeTime);
+	}
+	else if (ser_action.ForRead())
+	{
+		const_cast<CDiskBlockIndex*>(this)->prevoutStake.SetNull();
+		const_cast<CDiskBlockIndex*>(this)->nStakeTime = 0;
+	}
+	READWRITE(hashProofOfStake);
         // block header
         READWRITE(obj.nVersion);
         READWRITE(obj.hashPrev);

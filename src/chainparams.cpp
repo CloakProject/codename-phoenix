@@ -76,22 +76,26 @@ public:
         consensus.BIP34Hash = uint256S("0x2d8251121940abce6e28df134c6432e8c5a00d59989a2451806c2778c3a06112"); // Block v2, Height in Coinbase [using genesis]
         consensus.BIP65Height = 388381; // OP_CHECKLOCKTIMEVERIFY [Consensus (soft fork)] - forced far into future for now
         consensus.BIP66Height = 363725; // Strict DER signatures [Consensus (soft fork)] - forced far into future for now
-        consensus.powLimit = uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-        consensus.nPowTargetTimespan = 3.5 * 24 * 60 * 60; // 3.5 days
-        consensus.nPowTargetSpacing = 2.5 * 60;
+
+        // Proof of stake
+        consensus.nProofOfStakeLimit = UintToArith256(uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
+        consensus.nStakeMinAge = 60 * 60 * 1 * 1; // 1h, minimum age for coin age:  6h
+        consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight:  4d 60*60*24*1
+        consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
+
+        // Proof of work
+        consensus.nProofOfWorkLimit = UintToArith256(uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
+        consensus.nPowTargetTimespan = 60 * 30; // 30 blocks
+        consensus.nPowTargetSpacing = 3 * consensus.nStakeTargetSpacing;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
+        
+        // Deployments
         consensus.nRuleChangeActivationThreshold = 6048; // 75% of 8064
         consensus.nMinerConfirmationWindow = 8064; // nPowTargetTimespan / nPowTargetSpacing * 4
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
-
-	// Proof of stake
-        consensus.posLimit = uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-        consensus.nStakeMinAge = 60 * 60 * 1 * 1; // 1h, minimum age for coin age
-        consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight
-        consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
 
         // Deployment of BIP68, BIP112, and BIP113.
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
@@ -238,7 +242,7 @@ public:
         consensus.BIP34Hash = uint256S("0x0000000023b3a96d3484e5abb3755c413e7d41500f8e2a5c3f0dd01299cd8ef8");
         consensus.BIP65Height = 581885; // 00000000007f6655f22f98e72ed80d8b06dc761d5da09df0fa1dc4be4f861eb6
         consensus.BIP66Height = 330776; // 000000002104c8c45e99a8853285a3b592602a3ccde2b832481da85e9e4ba182
-        consensus.powLimit = uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.nProofOfWorkLimit = UintToArith256(uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
         consensus.nPowTargetTimespan = 3.5 * 24 * 60 * 60; // 3.5 days
         consensus.nPowTargetSpacing = 2.5 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;
@@ -250,7 +254,7 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999;   // December 31, 2008
 
         // Proof of stake
-        consensus.posLimit = uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.nProofOfStakeLimit = UintToArith256(uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
         consensus.nStakeMinAge = 60 * 60 * 1 * 1; // 1h, minimum age for coin age:  6h
         consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight:  4d 60*60*24*1
         consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
@@ -444,12 +448,9 @@ public:
         consensus.BIP16Exception = uint256();
         consensus.BIP34Height = 500; // BIP34 activated on regtest (Used in functional tests)
         consensus.BIP34Hash = uint256();
-        consensus.BIP65Height = 1351; // BIP65 activated on regtest (Used in functional tests)
-        consensus.BIP66Height = 1251; // BIP66 activated on regtest (Used in functional tests)
-        consensus.CSVHeight = 432; // CSV activated on regtest (Used in rpc activation tests)
-        consensus.SegwitHeight = 0; // SEGWIT is always activated on regtest unless overridden
-        consensus.MinBIP9WarningHeight = 0;
-        consensus.powLimit = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+        consensus.BIP65Height = 1351; // BIP65 activated on regtest (Used in rpc activation tests)
+        consensus.BIP66Height = 1251; // BIP66 activated on regtest (Used in rpc activation tests)
+        consensus.nProofOfWorkLimit = UintToArith256(uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.fPowAllowMinDifficultyBlocks = true;

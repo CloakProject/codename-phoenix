@@ -148,6 +148,57 @@ extern uint64_t nPruneTarget;
 /** Documentation for argument 'checklevel'. */
 extern const std::vector<std::string> CHECKLEVEL_DOC;
 
+static const signed int DEFAULT_CHECKBLOCKS = 6;
+static const unsigned int DEFAULT_CHECKLEVEL = 3;
+
+// Require that user allocate at least 550MB for block & undo files (blk???.dat and rev???.dat)
+// At 1MB per block, 288 blocks = 288MB.
+// Add 15% for Undo data = 331MB
+// Add 20% for Orphan block rate = 397MB
+// We want the low water mark after pruning to be at least 397 MB and since we prune in
+// full block file chunks, we need the high water mark which triggers the prune to be
+// one 128MB block file + added 15% undo data = 147MB greater for a total of 545MB
+// Setting the target to > than 550MB will make it likely we can respect the target.
+static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
+
+/**
+ * Process an incoming block. This only returns after the best known valid
+ * block is made active. Note that it does not, however, guarantee that the
+ * specific block passed to it has been checked for validity!
+ *
+ * If you want to *possibly* get feedback on whether pblock is valid, you must
+ * install a CValidationInterface (see validationinterface.h) - this will have
+ * its BlockChecked method called whenever *any* block completes validation.
+ *
+ * Note that we guarantee that either the proof-of-work is valid on pblock, or
+ * (and possibly also) BlockChecked will have been called.
+ *
+ * May not be called in a
+ * validationinterface callback.
+ *
+ * @param[in]   pblock  The block we want to process.
+ * @param[in]   fForceProcessing Process this block even if unrequested; used for non-network block sources and whitelisted peers.
+ * @param[out]  fNewBlock A boolean which is set to indicate if the block was first received via this call
+ * @return True if state.IsValid()
+ */
+bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool fIsProofOfStake, bool* fNewBlock) LOCKS_EXCLUDED(cs_main);
+
+/**
+ * Process incoming block headers.
+ *
+ * May not be called in a
+ * validationinterface callback.
+ *
+ * @param[in]  block The block headers themselves
+ * @param[out] state This may be set to an Error state if any error occurred processing them
+ * @param[in]  chainparams The params for the chain we want to connect to
+ * @param[out] ppindex If set, the pointer will be set to point to the last new block index object for the given headers
+ * @param[out] first_invalid First header that fails validation, if one exists
+ */
+bool ProcessNewBlockHeaders(const std::vector<CBlockHeader>& block, CValidationState& state, const CChainParams& chainparams, const CBlockIndex** ppindex = nullptr, CBlockHeader* first_invalid = nullptr) LOCKS_EXCLUDED(cs_main);
+
+/** Check whether enough disk space is available for an incoming block */
+bool CheckDiskSpace(uint64_t nAdditionalBytes = 0, bool blocks_dir = false);
 /** Open a block file (blk?????.dat) */
 FILE* OpenBlockFile(const FlatFilePos &pos, bool fReadOnly = false);
 /** Translation to a filesystem path */
@@ -295,7 +346,11 @@ bool UndoReadFromDisk(CBlockUndo& blockundo, const CBlockIndex* pindex);
 /** Functions for validating blocks and updating the block tree */
 
 /** Context-independent validity checks */
-bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
+bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true, bool fCheckSig = true);
+
+bool CheckBlockSignature(const CBlock& block, const Consensus::Params& consensusParams);
+
+int64_t GetProofOfStakeReward(int nHeight, int64_t nCoinAge, int64_t nFees, CBlockIndex* pindexPrev);
 
 /** Check a block is completely valid from start to finish (only works on top of our current best block) */
 bool TestBlockValidity(BlockValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW = true, bool fCheckMerkleRoot = true) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
