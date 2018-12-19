@@ -1993,7 +1993,15 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             }
 
             if (inv.type == MSG_BLOCK) {
+                
                 UpdateBlockAvailability(pfrom->GetId(), inv.hash);
+
+                if (vInv.size() == 1 && pfrom->nVersion == INIT_PROTO_VERSION)
+                {
+                    // old 60018 version sends topblock when the last block from an INV is requested.
+                    // this breaks things if not handled correctly... 
+                }
+
                 bool canHandlePoSHeaders = pfrom->nVersion >= VERSION_GETHEADERS_POS;
                 if (!fAlreadyHave && !fImporting && !fReindex && !mapBlocksInFlight.count(inv.hash)) {
                     if (canHandlePoSHeaders)
@@ -2008,21 +2016,14 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                     }
                     else
                     {
-                        // older client, getdata->block
-                        std::vector<CInv> invs;
-                        invs.push_back(CInv(MSG_BLOCK, inv.hash));
-                        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
+                        // old client, ask for block in next INV request
+                        pfrom->AskFor(inv);
                     }
-                }
-
-                if (inv.hash.GetHex() == "9cd16b4fbb0a11783767cbae5d5c52a7b92f61d8c320031b3968eb4b6c001115 ")
-                {
-                    int xxxx = 1;
                 }
 
                 if (nInv == nLastBlock)
                 {
-                    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETBLOCKS, chainActive.GetLocator(mapBlockIndex[inv.hash]), uint256()));
+                    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETBLOCKS, chainActive.GetLocator(pindexBestHeader), inv.hash));
                     LogPrint(BCLog::NET, "getblocks (%d) to peer=%d\n", pindexBestHeader->nHeight, pfrom->GetId());
                 }
             }
@@ -2765,7 +2766,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
     {
         std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
         vRecv >> *pblock;
-
+        
         LogPrint(BCLog::NET, "received block %s peer=%d\n", pblock->GetHash().ToString(), pfrom->GetId());
 
         bool forceProcessing = false;
@@ -2807,6 +2808,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 mapProofOfStake.insert(std::make_pair(pblock->GetHash(), hashProofOfStake));
         }else
         {
+            std::string bhhh = pblock->GetHash().GetHex();
             ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
         }
         if (fNewBlock) {
