@@ -154,7 +154,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     if (!GetLastStakeModifier(pindexPrev, nStakeModifier, nModifierTime))
         return error("ComputeNextStakeModifier: unable to get last modifier");
     
-    LogPrint(BCLog::ALL, "ComputeNextStakeModifier: prev modifier=0x%016x time=%s\n", nStakeModifier, DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nModifierTime).c_str());
+    LogPrint(BCLog::SELECTCOINS, "ComputeNextStakeModifier: prev modifier=0x%016x time=%s\n", nStakeModifier, DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nModifierTime).c_str());
 
     if (nModifierTime / nModifierInterval >= pindexPrev->GetBlockTime() / nModifierInterval)
         return true;
@@ -214,11 +214,11 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
             // 'W' indicates selected proof-of-work blocks
             strSelectionMap.replace(item.second->nHeight - nHeightFirstCandidate, 1, item.second->IsProofOfStake() ? "S" : "W");
         }
-        LogPrint(BCLog::ALL, "ComputeNextStakeModifier: selection height [%d, %d] map %s\n", nHeightFirstCandidate, pindexPrev->nHeight, strSelectionMap.c_str());
+        LogPrint(BCLog::SELECTCOINS, "ComputeNextStakeModifier: selection height [%d, %d] map %s\n", nHeightFirstCandidate, pindexPrev->nHeight, strSelectionMap.c_str());
     }
     if (gArgs.GetBoolArg("-printstakemodifier", false))
     {
-        LogPrint(BCLog::ALL, "ComputeNextStakeModifier: new modifier=0x%016x time=%s\n", nStakeModifierNew, DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexPrev->GetBlockTime()).c_str());
+        LogPrint(BCLog::SELECTCOINS, "ComputeNextStakeModifier: new modifier=0x%016x time=%s\n", nStakeModifierNew, DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexPrev->GetBlockTime()).c_str());
     }
 
     nStakeModifier = nStakeModifierNew;
@@ -239,7 +239,7 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
     arith_uint256 hashChecksum = UintToArith256(Hash(ss.begin(), ss.end()));
     hashChecksum >>= (256 - 32);
     if (gArgs.GetBoolArg("-printstakemodifier", false))
-        LogPrint(BCLog::ALL, "stake checksum : 0x % 016x", ArithToUint256(hashChecksum).GetUint64(0));
+        LogPrint(BCLog::SELECTCOINS, "stake checksum : 0x % 016x", ArithToUint256(hashChecksum).GetUint64(0));
     return hashChecksum.GetLow64();
 }
 
@@ -345,7 +345,7 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     if (!GetKernelStakeModifier(pindexPrev->GetBlockHash(), nStakeModifier, nStakeModifierHeight, nStakeModifierTime, fPrintProofOfStake))
     {
         LogPrint(BCLog::ALL, ">>> CheckStakeKernelHash: GetKernelStakeModifier return false\n");
-        return false;
+        return false; 
     }
 
     if (fPrintProofOfStake)

@@ -2713,6 +2713,13 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                 LogPrint(BCLog::NET, "got inv: %s  %s peer=%d\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom.GetId());
 
                 UpdateBlockAvailability(pfrom.GetId(), inv.hash);
+
+                // if (vInv.size() == 1 && pfrom->nVersion == INIT_PROTO_VERSION)
+                // {
+                //     // old 60018 version sends topblock when the last block from an INV is requested.
+                //     // this breaks things if not handled correctly... 
+                // }
+
                 bool canHandlePoSHeaders = pfrom->nVersion >= VERSION_GETHEADERS_POS;
                 if (!fAlreadyHave && !fImporting && !fReindex && !mapBlocksInFlight.count(inv.hash)) {
                     // Headers-first is the primary method of announcement on
