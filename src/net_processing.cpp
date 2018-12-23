@@ -1787,7 +1787,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         pfrom->nTimeOffset = nTimeOffset;
         AddTimeData(pfrom->addr, nTimeOffset);
 
-        /*
+        /* note: now handled in node send messages...
         // Ask the first connected node for block updates
         static int nAskedForBlocks = 0;
         if (!pfrom->fClient && !pfrom->fOneShot &&
@@ -1812,8 +1812,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         }
         return true;
     }
-
-
+    
     else if (pfrom->nVersion == 0)
     {
         // Must have a version message before anything else
@@ -2023,8 +2022,15 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
 
                 if (nInv == nLastBlock)
                 {
-                    connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETBLOCKS, chainActive.GetLocator(pindexBestHeader), inv.hash));
-                    LogPrint(BCLog::NET, "getblocks (%d) to peer=%d\n", pindexBestHeader->nHeight, pfrom->GetId());
+                    if (canHandlePoSHeaders) {
+                        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), inv.hash));
+                        LogPrint(BCLog::NET, "getblocks (%d) to peer=%d\n", pindexBestHeader->nHeight, pfrom->GetId());
+                    }
+                    else {
+                        // older client, revert to using getblocks
+                        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETBLOCKS, chainActive.GetLocator(pindexBestHeader), inv.hash));
+                        LogPrint(BCLog::NET, "getblocks (%d) to peer=%d\n", pindexBestHeader->nHeight, pfrom->GetId());
+                    }
                 }
             }
             else
@@ -2800,6 +2806,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 //        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
                 //    }*/
                 //}
+                LogPrintf("Got new topblock with hash: %s\n", pblock->GetHash().ToString());
             }else
             {
                 ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
