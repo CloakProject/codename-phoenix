@@ -2194,7 +2194,6 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     AssertLockHeld(cs_main);
     assert(pindex);
     uint256 blockHash = block.GetHash();
-    std::string ssss = blockHash.GetHex();
     assert(*pindex->phashBlock == blockHash);
     
     if (block.IsProofOfStake())
@@ -3506,6 +3505,14 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block)
     if (!pindexNew->SetStakeEntropyBit(block.GetStakeEntropyBit(pindexNew->nHeight)))
         LogPrintf("AddToBlockIndex() : SetStakeEntropyBit() failed");
 
+    // ppcoin: record proof-of-stake hash value
+    if (pindexNew->IsProofOfStake())
+    {
+        if (!mapProofOfStake.count(hash))
+            error("AddToBlockIndex() : hashProofOfStake not found in map");
+        pindexNew->hashProofOfStake = UintToArith256(mapProofOfStake[hash]);
+    }
+
     // ppcoin: compute stake modifier
     uint64_t nStakeModifier = 0;
     bool fGeneratedStakeModifier = false;
@@ -3663,13 +3670,11 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     if (block.fChecked)
         return true;
 
-    std::string xxxxx = block.GetHash().GetHex();
-
     // Check that the header is valid (particularly PoW).  This is mostly
     // redundant with the call in AcceptBlockHeader.
     if (block.IsProofOfWork())
-	    if (!CheckBlockHeader(block, state, consensusParams, false))
-		    return false;
+        if (!CheckBlockHeader(block, state, consensusParams, false))
+            return false;
 
     // Signet only: check block solution
     if (consensusParams.signet_blocks && fCheckPOW && !CheckSignetBlockSolution(block, consensusParams)) {
@@ -3705,8 +3710,8 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
     // because we receive the wrong transactions for it.
     // Note that witness malleability is checked in ContextualCheckBlock, so no
     // checks that use witness data may be performed here.
-
     // Size limits
+
     if (block.vtx.empty() || block.vtx.size() * WITNESS_SCALE_FACTOR > MAX_BLOCK_WEIGHT || ::GetSerializeSize(block, PROTOCOL_VERSION | SERIALIZE_TRANSACTION_NO_WITNESS) * WITNESS_SCALE_FACTOR > MAX_BLOCK_WEIGHT)
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-blk-length", "size limits failed");
 
@@ -4545,6 +4550,12 @@ bool BlockManager::LoadBlockIndex(
             pindex->BuildSkip();
         if (pindex->IsValid(BLOCK_VALID_TREE) && (pindexBestHeader == nullptr || CBlockIndexWorkComparator()(pindexBestHeader, pindex)))
             pindexBestHeader = pindex;
+
+        // ppcoin: calculate stake modifier checksum
+        pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
+        if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex->nStakeModifierChecksum))
+            return error("CChainState::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016x", pindex->nHeight, pindex->nStakeModifier);
+
     }
 
     return true;

@@ -209,6 +209,7 @@ public:
         nFile = 0;
         nFlags = 0;
         nStakeModifier = 0;
+        nStakeModifierChecksum = 0;
         hashProofOfStake = arith_uint256();
         prevoutStake.SetNull();
         nStakeTime = 0;
