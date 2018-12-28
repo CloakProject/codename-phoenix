@@ -42,18 +42,32 @@ public:
         memset(data, 0, sizeof(data));
     }
 
-    inline int Compare(const base_blob& other) const { return memcmp(data, other.data, sizeof(data)); }
+    inline int Compare(const base_blob& other) const
+    {
+        int res = memcmp(data, other.data, sizeof(data));
+	return res;
+    }
 
     friend inline bool operator==(const base_blob& a, const base_blob& b) { return a.Compare(b) == 0; }
     friend inline bool operator!=(const base_blob& a, const base_blob& b) { return a.Compare(b) != 0; }
-    friend inline bool operator<(const base_blob& a, const base_blob& b) { return a.Compare(b) < 0; }
+    friend inline bool operator<(const base_blob& a, const base_blob& b)
+    {
+	for (int i = sizeof(a.data) - 1; i >= 0; i--)
+	{
+	    if (a.data[i] < b.data[i])
+			return true;
+		else if (a.data[i] > b.data[i])
+			return false;
+	}
+	return false;
+    }
         
     std::string GetHex() const;
     void SetHex(const char* psz);
     void SetHex(const std::string& str);
     std::string ToString() const;
 
-    unsigned char* begin()
+    unsigned char* begin() 
     {
         return &data[0];
     }
@@ -189,5 +203,12 @@ public:
         return ret;
     }
 };
+
+inline uint512 uint512S(const std::string& str)
+{
+    uint512 rv;
+    rv.SetHex(str);
+    return rv;
+}
 
 #endif // BITCOIN_UINT256_H
