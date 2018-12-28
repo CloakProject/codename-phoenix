@@ -35,13 +35,10 @@ public:
         this->second = hash;
     }
 
-    // todo: check sort defaulting to < comparison on LINUX etc
     friend inline bool operator<(const TimeHash& a, const TimeHash& b)
     {
-        bool timeLess = a.first < b.first;
-        bool hashLess = a.second < b.second;
-        return timeLess || timeLess && hashLess;
-    }    
+        return a.first < b.first || a.first == b.first && a.second < b.second;
+    }       
 };
 
 // Hashed
@@ -112,7 +109,6 @@ static bool SelectBlockFromCandidates(
     arith_uint256 hashBest = arith_uint256();
 
     *pindexSelected = (const CBlockIndex*)0;
-    int idx = 0;
 
     std::vector<const CBlockIndex*> indexes;
 
@@ -130,10 +126,7 @@ static bool SelectBlockFromCandidates(
             continue;
         // compute the selection hash by hashing its proof-hash and the
         // previous proof-of-stake modifier
-        std::string strBlockhash = item.second.GetHex(); 
-        std::string strTimestamp = DateTimeStrFormat("%Y-%m-%d %H:%M:%S", item.first);
         uint256 hashProof = pindex->IsProofOfStake() ? ArithToUint256(pindex->hashProofOfStake) : pindex->GetBlockHash();
-        std::string strHashProof = hashProof.GetHex();
         CDataStream ss(SER_GETHASH, 0);
         ss << hashProof << nStakeModifierPrev;        
         arith_uint256 hashSelection = UintToArith256(Hash(ss.begin(), ss.end()));
@@ -202,43 +195,17 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     int index = 0;
     while (pindex && pindex->GetBlockTime() >= nSelectionIntervalStart)
     {
-        //LogPrintf("Adding %d height = %d hash = %s\n", index, pindex->nHeight, pindex->GetBlockHash().GetHex());
         uint256 hash = pindex->GetBlockHash();
-       // hash.SetLegacy(); // to use old equality comparison
         vSortedByTimestamp.push_back(TimeHash(pindex->GetBlockTime(), hash));
         pindex = pindex->pprev;
         index++;
     }
     int nHeightFirstCandidate = pindex ? (pindex->nHeight + 1) : 0;
-    /*
-    int idx = 0;
-    for each(const std::pair<int64_t, uint256>& item in vSortedByTimestamp)
-    {
-        const CBlockIndex* pindex = mapBlockIndex[item.second];
-        LogPrintf("1 idx %d height = %d, hash = %s, time = %s\n", idx, pindex->nHeight, item.second.GetHex(), DateTimeStrFormat("%Y-%m-%d %H:%M:%S", item.first));
-        idx++;
-    }
-      */
-    reverse(vSortedByTimestamp.begin(), vSortedByTimestamp.end());
-    /*idx = 0;
-    for each(const std::pair<int64_t, uint256>& item in vSortedByTimestamp)
-    {
-        const CBlockIndex* pindex = mapBlockIndex[item.second];
-        LogPrintf("2 idx %d height = %d, hash = %s, time = %s\n", idx, pindex->nHeight, item.second.GetHex(), DateTimeStrFormat("%Y-%m-%d %H:%M:%S", item.first));
-        idx++;
-    }
-    */
+
+    reverse(vSortedByTimestamp.begin(), vSortedByTimestamp.end());   
     // custom sort the hashed timestamps
     sort(vSortedByTimestamp.begin(), vSortedByTimestamp.end());
-    /*i
-    idx = 0;
-    for each(const std::pair<int64_t, uint256>& item in vSortedByTimestamp)
-    {
-        const CBlockIndex* pindex = mapBlockIndex[item.second];
-        LogPrintf("3 idx %d height = %d, hash = %s, time = %s\n", idx, pindex->nHeight, item.second.GetHex(), DateTimeStrFormat("%Y-%m-%d %H:%M:%S", item.first));
-        idx++;
-    }
-     */
+
     // Select 64 blocks from candidate blocks to generate stake modifier
     uint64_t nStakeModifierNew = 0;
     int64_t nSelectionIntervalStop = nSelectionIntervalStart;
@@ -248,19 +215,6 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
         // add an interval section to the current selection round
         nSelectionIntervalStop += GetStakeModifierSelectionIntervalSection(nRound);
         // select a block from the candidates of current round
-        /*
-        if (nRound == 12)
-        {
-            int idx = 0;
-            for each(const std::pair<int64_t, uint256>& item in vSortedByTimestamp)
-            {
-                const CBlockIndex* pindex = mapBlockIndex[item.second];
-                LogPrintf("idx %d height = %d, hash = %s, time = %s\n", idx, pindex->nHeight, item.second.GetHex(), DateTimeStrFormat("%Y-%m-%d %H:%M:%S", item.first));
-                idx++;
-            }
-            int xxcxcxczxc = 1;
-        }
-        */
         if (!SelectBlockFromCandidates(vSortedByTimestamp, mapSelectedBlocks, nSelectionIntervalStop, nStakeModifier, &pindex))
             return error("ComputeNextStakeModifier: unable to select block at round %d", nRound);
         // write the entropy bit of the selected block
@@ -413,17 +367,23 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     if (nTimeBlockFrom + Params().GetConsensus().nStakeMinAge > nTimeTx) // Min age requirement
         return error("CheckStakeKernelHash() : min age violation");
 
-    arith_uint256 bnTargetPerCoinDay(nBits);
+    arith_uint256 bnTargetPerCoinDay;
+    bnTargetPerCoinDay.SetCompact(nBits);
     int64_t nValueIn = txPrev->vout[prevout.n].nValue;
 
     // v0.3 protocol kernel hash weight starts from 0 at the min age
     // this change increases active coins participating the hash and helps
     // to secure the network when proof-of-stake difficulty is low
     int64_t nTimeWeight = std::min((int64_t)nTimeTx - txPrev->nTime, (int64_t)Params().GetConsensus().nStakeMaxAge) - Params().GetConsensus().nStakeMinAge;
-    arith_uint256 bnCoinDayWeight = arith_uint256(nValueIn) * nTimeWeight / (COIN / 100) / (24 * 60 * 60);
+    arith_uint512 bnCoinDayWeight = arith_uint512(nValueIn) * nTimeWeight / (COIN / 100) / (24 * 60 * 60);
+
+    // We need to convert to uint512 to prevent overflow when multiplying by 1st block coins
+    base_uint<512> targetProofOfStake512(bnTargetPerCoinDay.GetHex());
+    targetProofOfStake512 *= bnCoinDayWeight;
 
     std::string bdw = bnCoinDayWeight.GetHex();
     std::string ctd = bnTargetPerCoinDay.GetHex();
+    std::string target = targetProofOfStake512.GetHex();
 
     // Calculate hash
     CDataStream ss(SER_GETHASH, 0);
@@ -460,8 +420,13 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
 
     std::string hashProof = hashProofOfStake.GetHex();
 
+    // We need to convert type so it can be compared to target
+    base_uint<512> hashProofOfStake512(hashProofOfStake.GetHex());
+
+    std::string hashProof512 = hashProofOfStake512.GetHex();
+
     // Now check if proof-of-stake hash meets target protocol
-    if (UintToArith256(hashProofOfStake) > bnCoinDayWeight * bnTargetPerCoinDay)
+    if (hashProofOfStake512 > targetProofOfStake512)
     {
         LogPrint(BCLog::ALL, ">>> bnCoinDayWeight = %s, bnTargetPerCoinDay=%s\n", bnCoinDayWeight.ToString().c_str(), bnTargetPerCoinDay.ToString().c_str());
         LogPrint(BCLog::ALL, ">>> CheckStakeKernelHash - hashProofOfStake too much\n");
@@ -501,12 +466,9 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
     // get input tx and block ref containing for block including input tx
     if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), hashPrevBlock, true))
         return error("CheckProofOfStake() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
-    
-    //CDiskTxPos txDiskPosOffset;
-    //g_txindex->GetDiskTxPos(txin.prevout.hash, txDiskPosOffset);
-    
+        
     CCoinsViewCache inputs(pcoinsTip.get());
-
+    
     if (fCHeckSignature)
     {
         PrecomputedTransactionData txdata(*tx);

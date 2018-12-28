@@ -2027,47 +2027,5 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     StartupNotify(args);
 #endif
 
-    /*
-    uint256 nn;
-    nn.SetHex("000000001a58971fe006ebda7476f4fe5f9208bfcbaebd734e77064d375f6ce3");
-    CBlockIndex* pindexNew = mapBlockIndex[nn];
-    CBlock blockPrev;
-
-    if (ReadBlockFromDisk(blockPrev, pindexNew, Params().GetConsensus()) == false)
-        return error("CheckProofOfStake() : read block failed");
-
-    uint64_t nStakeModifier = 0;
-    bool fGeneratedStakeModifier = false;
-    ComputeNextStakeModifier(pindexNew, nStakeModifier, fGeneratedStakeModifier);
-    std::string ssssssssssssssss = std::to_string(nStakeModifier);
-    unsigned int nStakeModifierChecksum = GetStakeModifierChecksum(pindexNew);
-    int xx = 1;
-    */
-    /*
-
-    uint256 hashProofOfStake = uint256();
-    //CheckProofOfStake(blockPrev.vtx[1], blockPrev.nBits, hashProofOfStake);
-        
-    // First try finding the previous transaction in database
-    CTransactionRef txPrev = blockPrev.vtx[0];
-    uint256 hashPrevBlock = uint256();
-    
-    //CDiskTxPos txDiskPosOffset;
-    //g_txindex->GetDiskTxPos(txin.prevout.hash, txDiskPosOffset);
-
-    CDiskBlockPos blockPos = pindexNew->GetBlockPos();
-    
-    int prevTxOffsetInBlock = blockPos.nPos + GetSerializeSize(CBlock(), SER_DISK, CLIENT_VERSION) - (2 * GetSizeOfCompactSize(0)) + GetSizeOfCompactSize(blockPrev.vtx.size());
-    //for (int i = 0; i < blockPrev.vtx.size(); i++)
-    //    prevTxOffsetInBlock += GetSerializeSize(blockPrev.vtx[i], SER_DISK, CLIENT_VERSION);
-
-    uint256 u;
-    u.SetHex("7a6c35d180cd21ec2addabc45e48e43d156ee3b612417a4bdfee069830561520");
-    COutPoint op(u, 0);
-
-    if (!CheckStakeKernelHash(541065215, pindexNew, prevTxOffsetInBlock - blockPos.nPos, txPrev, op, 1402356222, hashProofOfStake))
-        return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", "", hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
-        */
-
     return true;
 }

@@ -45,7 +45,17 @@ public:
 
     friend inline bool operator==(const base_blob& a, const base_blob& b) { return a.Compare(b) == 0; }
     friend inline bool operator!=(const base_blob& a, const base_blob& b) { return a.Compare(b) != 0; }
-    friend inline bool operator<(const base_blob& a, const base_blob& b) { return a.Compare(b) < 0; }
+    friend inline bool operator<(const base_blob& a, const base_blob& b)
+    {
+	for (int i = sizeof(a.data) - 1; i >= 0; i--)
+	{
+	    if (a.data[i] < b.data[i])
+			return true;
+		else if (a.data[i] > b.data[i])
+			return false;
+	}
+	return false;
+    }
         
     std::string GetHex() const;
     void SetHex(const char* psz);
@@ -184,5 +194,12 @@ public:
         return ret;
     }
 };
+
+inline uint512 uint512S(const std::string& str)
+{
+    uint512 rv;
+    rv.SetHex(str);
+    return rv;
+}
 
 #endif // BITCOIN_UINT256_H

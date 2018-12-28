@@ -2089,9 +2089,10 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
     std::string xxx1 = Params().ProofOfStakeLimit().GetHex();
     std::string xxx2 = Params().ProofOfWorkLimit().GetHex();
 
+
     // Proof-of-Stake blocks has own target limit since nVersion=3 supermajority on mainNet and always on testNet
     arith_uint256 bnTargetLimit = fProofOfStake ? Params().ProofOfStakeLimit() : Params().ProofOfWorkLimit();
-    
+        
     if (pindexLast == NULL) {
         unsigned int xxxx = bnTargetLimit.GetCompact();
         return bnTargetLimit.GetCompact(); // genesis block
@@ -2120,11 +2121,11 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
     // ppcoin: retarget with exponential moving toward target spacing
     arith_uint256 bnNew;
     bnNew.SetCompact(pindexPrev->nBits);
-
+    arith_uint512 bnNew512(bnNew.GetHex());
     int64_t nTargetSpacing = fProofOfStake ? Params().GetConsensus().nStakeTargetSpacing : std::min(Params().GetConsensus().nPowTargetSpacing, (int64_t)Params().GetConsensus().nStakeTargetSpacing * (1 + pindexLast->nHeight - pindexPrev->nHeight));
     int64_t nInterval = Params().GetConsensus().nPowTargetTimespan / nTargetSpacing;
-    bnNew *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
-    bnNew /= ((nInterval + 1) * nTargetSpacing);
+    bnNew512 *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
+    bnNew512 /= ((nInterval + 1) * nTargetSpacing);
 
     /*
     printf(">> Height = %d, fProofOfStake = %d, nInterval = %"PRI64d", nTargetSpacing = %"PRI64d", nActualSpacing = %"PRI64d"\n",
@@ -2133,45 +2134,11 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
         pindexPrev->GetBlockTime(), pindexPrev->nHeight, pindexPrevPrev->GetBlockTime(), pindexPrevPrev->nHeight);
     */
 
-    if (bnNew > bnTargetLimit)
-        bnNew = bnTargetLimit;
-
+    arith_uint512 bnTargetLimit512 = arith_uint512(bnTargetLimit.GetHex());
+    if (bnNew512 > bnTargetLimit512)
+        bnNew512 = bnTargetLimit512;
+    bnNew = arith_uint256::from_other_size(bnNew512);
     return bnNew.GetCompact();
-    /*
-    arith_uint256 bnTargetLimit = fProofOfStake ? Params().ProofOfStakeLimit() : Params().ProofOfWorkLimit();
-
-    if (pindexLast == NULL)
-        return bnTargetLimit.GetCompact(); // genesis block
-
-
-    const CBlockIndex* pindexPrev = GetLastBlockIndex(pindexLast, fProofOfStake);
-    if (pindexPrev->pprev == NULL)
-        return bnTargetLimit.GetCompact(); // first block
-
-    const CBlockIndex* pindexPrevPrev = GetLastBlockIndex(pindexPrev->pprev, fProofOfStake);
-    if (pindexPrevPrev->pprev == NULL)
-        return bnTargetLimit.GetCompact(); // second block
-
-    int64_t nActualSpacing = pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime();
-
-    if (nActualSpacing < 0)
-        nActualSpacing = 1;
-        //nActualSpacing = Params().GetConsensus().nTargetSpacing;
-
-    // ppcoin: target change every block
-    // ppcoin: retarget with exponential moving toward target spacing
-    arith_uint256 bnNew;
-    bnNew.SetCompact(pindexPrev->nBits);
-
-    arith_uint256 nInterval = (Params().GetConsensus().nTargetTimespan) / (Params().GetConsensus().nStakeTargetSpacing);
-    bnNew *= (((nInterval - 1)) * (Params().GetConsensus().nTargetSpacing) + (nActualSpacing)+(nActualSpacing));
-    bnNew /= (((nInterval + 1)) * (Params().GetConsensus().nTargetSpacing));
-
-    if (bnNew <= 0 || bnNew > bnTargetLimit)
-        bnNew = bnTargetLimit;
-
-    return bnNew.GetCompact();
-    */
 }
 
 
@@ -2196,24 +2163,9 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     uint256 blockHash = block.GetHash();
     assert(*pindex->phashBlock == blockHash);
     
-    if (block.IsProofOfStake())
-    {
-        pindex->SetProofOfStake();
-        pindex->prevoutStake = block.vtx[1]->vin[0].prevout;
-        pindex->nStakeTime = block.vtx[1]->nTime;
-    }
-    else
-    {
-        pindex->prevoutStake.SetNull();
-        pindex->nStakeTime = 0;
-    }
-
     int64_t nTimeStart = GetTimeMicros();
     int64_t nStakeReward = 0;
     
-    if (pindex->IsProofOfStake())
-        setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));
-
     if (pindex->IsProofOfWork() && pindex->nHeight > CUTOFF_POW_BLOCK)
         return state.DoS(100, error("AcceptBlock() : No proof-of-work allowed anymore (height = %d)", pindex->nHeight));
 
@@ -2221,12 +2173,6 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     if (block.nBits != GetNextTargetRequired(pindex->pprev, block.IsProofOfStake())) {
         return state.DoS(1, error("ConnectBlock() : incorrect %s at height %d (%d)", !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev ? pindex->pprev->nHeight : 0, block.nBits), REJECT_INVALID, "bad-diffbits");
     }
-
-    // ppcoin: check proof-of-stake
-    // Limited duplicity on stake: prevents block flood attack
-    // Duplicate stake allowed only when there is orphan child block
-    if (block.IsProofOfStake() && setStakeSeen.count(block.GetProofOfStake()) && !mapOrphanBlocksByPrev.count(blockHash))
-        return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
 
     // Check it again in case a previous version let a bad block in
     // NOTE: We don't currently (re-)invoke ContextualCheckBlock() or
@@ -4201,6 +4147,23 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
         // request; don't process these.
         if (pindex->nChainWork < nMinimumChainWork) return true;
     }
+
+    // ppcoin: check proof-of-stake
+    if (pblock->IsProofOfStake())
+    {
+        pindex->SetProofOfStake();
+        pindex->prevoutStake = block.vtx[1]->vin[0].prevout;
+        pindex->nStakeTime = block.vtx[1]->nTime;
+
+        // Limited duplicity on stake: prevents block flood attack
+        // Duplicate stake allowed only when there is orphan child block
+        uint256 blockHash = pblock->GetHash();
+        if (setStakeSeen.count(block.GetProofOfStake()) && !mapOrphanBlocksByPrev.count(blockHash))
+            return error("AcceptBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
+
+        setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));
+    }
+
 
     if (!CheckBlock(block, state, chainparams.GetConsensus()) ||
         !ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindex->pprev)) {
