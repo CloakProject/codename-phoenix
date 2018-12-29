@@ -468,6 +468,9 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
         return error("CheckProofOfStake() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
         
     CCoinsViewCache inputs(pcoinsTip.get());
+
+    std::string hashBlockPrev = hashPrevBlock.GetHex();
+    std::string hashPrevTxIn = txin.prevout.hash.GetHex();
     
     if (fCHeckSignature)
     {
@@ -494,9 +497,13 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
         return error("CheckProofOfStake() : read block failed");
 
     int prevTxOffsetInBlock = blockPos.nPos + GetSerializeSize(CBlock(), SER_DISK, CLIENT_VERSION) - (2 * GetSizeOfCompactSize(0)) + GetSizeOfCompactSize(blockPrev.vtx.size());
-    for(int i=0; i<txin.prevout.n; i++)
+    for(int i=0; i< blockPrev.vtx.size(); i++)
+    {
+        if (blockPrev.vtx[i]->GetHash() == txPrev->GetHash())
+            break;
         prevTxOffsetInBlock += GetSerializeSize(blockPrev.vtx[i], SER_DISK, CLIENT_VERSION);
-        
+    }
+
     if (!CheckStakeKernelHash(nBits, pblockindex, prevTxOffsetInBlock - blockPos.nPos, txPrev, txin.prevout, tx->nTime, hashProofOfStake))
         return error("CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx->GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str()); // may occur during initial download or if behind on block chain sync
 
