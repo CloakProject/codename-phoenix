@@ -3440,6 +3440,7 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block)
         pindexNew->nHeight = pindexNew->pprev->nHeight + 1;
         pindexNew->BuildSkip();
     }
+
     pindexNew->nTimeMax = (pindexNew->pprev ? std::max(pindexNew->pprev->nTimeMax, pindexNew->nTime) : pindexNew->nTime);
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
@@ -3448,17 +3449,13 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block)
         pindexBestHeader = pindexNew;
 
     // ppcoin: compute stake entropy bit for stake modifier
-    if (!pindexNew->SetStakeEntropyBit(block.GetStakeEntropyBit(pindexNew->nHeight)))
+
+    //LogPrintf("GetStakeEntropyBit: nHeight=%u hashBlock=%s nEntropyBit=%u\n", nHeight, GetHash().ToString().c_str(), nEntropyBit);
+
+    unsigned int stakeBit = block.GetStakeEntropyBit(pindexNew->nHeight);
+    if (!pindexNew->SetStakeEntropyBit(stakeBit))
         LogPrintf("AddToBlockIndex() : SetStakeEntropyBit() failed");
-
-    // ppcoin: record proof-of-stake hash value
-    if (pindexNew->IsProofOfStake())
-    {
-        if (!mapProofOfStake.count(hash))
-            error("AddToBlockIndex() : hashProofOfStake not found in map");
-        pindexNew->hashProofOfStake = UintToArith256(mapProofOfStake[hash]);
-    }
-
+    
     // ppcoin: compute stake modifier
     uint64_t nStakeModifier = 0;
     bool fGeneratedStakeModifier = false;
@@ -3470,7 +3467,6 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block)
 
     if (!CheckStakeModifierCheckpoints(pindexNew->nHeight, pindexNew->nStakeModifierChecksum))
         error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016x", pindexNew->nHeight, nStakeModifier);
-
 
     setDirtyBlockIndex.insert(pindexNew);
 
@@ -4151,6 +4147,9 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     // ppcoin: check proof-of-stake
     if (pblock->IsProofOfStake())
     {
+        // ppcoin: record proof-of-stake hash value
+        if (!mapProofOfStake.count(block.GetHash()))
+            error("AddToBlockIndex() : hashProofOfStake not found in map");        
         pindex->SetProofOfStake();
         pindex->prevoutStake = block.vtx[1]->vin[0].prevout;
         pindex->nStakeTime = block.vtx[1]->nTime;
@@ -4162,9 +4161,11 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
             return error("AcceptBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
 
         setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));
+
+        // use PoS hash for proof
+        pindex->hashProofOfStake = UintToArith256(mapProofOfStake[block.GetHash()]);
     }
-
-
+    
     if (!CheckBlock(block, state, chainparams.GetConsensus()) ||
         !ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindex->pprev)) {
         if (state.IsInvalid() && state.GetResult() != BlockValidationResult::BLOCK_MUTATED) {
@@ -5031,7 +5032,6 @@ bool CChainState::LoadGenesisBlock(const CChainParams& chainparams)
     } catch (const std::runtime_error& e) {
         return error("%s: failed to write genesis block: %s", __func__, e.what());
     }
-
     return true;
 }
 

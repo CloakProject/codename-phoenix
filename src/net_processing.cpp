@@ -3569,13 +3569,15 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                 //        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
                 //    }*/
                 //}
+                LogPrintf("Got new topblock with hash: %s\n", pblock->GetHash().ToString());
             } else {
-                ProcessNewBlock(m_chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+                if (!mapProofOfStake.count(pblock->GetHash())) // add to mapProofOfStake
+                    mapProofOfStake.insert(std::make_pair(pblock->GetHash(), hashProofOfStake));
+
+                ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
             }
-            if (!mapProofOfStake.count(pblock->GetHash())) // add to mapProofOfStake
-                mapProofOfStake.insert(std::make_pair(pblock->GetHash(), hashProofOfStake));
         } else {
-            ProcessNewBlock(m_chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+            ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
         }
         if (fNewBlock) {
             pfrom.nLastBlockTime = GetTime();
