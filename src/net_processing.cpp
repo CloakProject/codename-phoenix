@@ -2772,9 +2772,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
     {
         std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
         vRecv >> *pblock;
-        
         LogPrint(BCLog::NET, "received block %s peer=%d\n", pblock->GetHash().ToString(), pfrom->GetId());
-
+        
         bool forceProcessing = false;
         const uint256 hash(pblock->GetHash());
         {
@@ -2809,13 +2808,13 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 LogPrintf("Got new topblock with hash: %s\n", pblock->GetHash().ToString());
             }else
             {
+                if (!mapProofOfStake.count(pblock->GetHash())) // add to mapProofOfStake
+                    mapProofOfStake.insert(std::make_pair(pblock->GetHash(), hashProofOfStake));
+
                 ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
             }
-            if (!mapProofOfStake.count(pblock->GetHash())) // add to mapProofOfStake
-                mapProofOfStake.insert(std::make_pair(pblock->GetHash(), hashProofOfStake));
         }else
-        {
-            std::string bhhh = pblock->GetHash().GetHex();
+        {            
             ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
         }
         if (fNewBlock) {

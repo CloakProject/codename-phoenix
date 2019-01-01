@@ -3053,6 +3053,7 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
         pindexNew->nHeight = pindexNew->pprev->nHeight + 1;
         pindexNew->BuildSkip();
     }
+
     pindexNew->nTimeMax = (pindexNew->pprev ? std::max(pindexNew->pprev->nTimeMax, pindexNew->nTime) : pindexNew->nTime);
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
@@ -3061,17 +3062,13 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
         pindexBestHeader = pindexNew;
 
     // ppcoin: compute stake entropy bit for stake modifier
-    if (!pindexNew->SetStakeEntropyBit(block.GetStakeEntropyBit(pindexNew->nHeight)))
+
+    //LogPrintf("GetStakeEntropyBit: nHeight=%u hashBlock=%s nEntropyBit=%u\n", nHeight, GetHash().ToString().c_str(), nEntropyBit);
+
+    unsigned int stakeBit = block.GetStakeEntropyBit(pindexNew->nHeight);
+    if (!pindexNew->SetStakeEntropyBit(stakeBit))
         LogPrintf("AddToBlockIndex() : SetStakeEntropyBit() failed");
-
-    // ppcoin: record proof-of-stake hash value
-    if (pindexNew->IsProofOfStake())
-    {
-        if (!mapProofOfStake.count(hash))
-            error("AddToBlockIndex() : hashProofOfStake not found in map");
-        pindexNew->hashProofOfStake = UintToArith256(mapProofOfStake[hash]);
-    }
-
+    
     // ppcoin: compute stake modifier
     uint64_t nStakeModifier = 0;
     bool fGeneratedStakeModifier = false;
@@ -3083,7 +3080,6 @@ CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)
 
     if (!CheckStakeModifierCheckpoints(pindexNew->nHeight, pindexNew->nStakeModifierChecksum))
         error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016x", pindexNew->nHeight, nStakeModifier);
-
 
     setDirtyBlockIndex.insert(pindexNew);
 
@@ -3592,13 +3588,6 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
     BlockMap::iterator miSelf = mapBlockIndex.find(hash);
     CBlockIndex *pindex = nullptr;
 
-    std::string hashx = block.GetHash().GetHex();
-
-    if (hashx == "39969c3daad80c97a81358e8dbcd34e813fe2f8eefe432fffee7035c294f1a90")
-    {
-        int xfdfdf = 1;
-    }
-
     BlockMap::iterator miEnd = mapBlockIndex.end();
 
     if (hash != chainparams.GetConsensus().hashGenesisBlock) {
@@ -3606,18 +3595,7 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
 
             typedef std::map<std::string, std::pair<std::string, int> > inner_map;
             typedef std::pair<bool, inner_map> map_entry;
-
-            int idx = 0;
-            for (BlockMap::iterator it = mapBlockIndex.begin(); it != mapBlockIndex.end(); ++it)
-            {
-                std::string hashxx = it->first.GetHex();
-                if (hashx == hashxx)
-                {
-                    int xxdfadsfg = 1;
-                }
-                idx++;
-            }
-
+            
             // Block header is already known.
             pindex = miSelf->second;
             if (ppindex)
@@ -3635,8 +3613,6 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
         BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
         if (mi == mapBlockIndex.end())
         {
-            std::string x1 = hash.GetHex();
-            std::string x2 = block.hashPrevBlock.GetHex();
             return state.DoS(10, error("%s: prev block not found", __func__), 0, "prev-blk-not-found");
         }
         pindexPrev = (*mi).second;
@@ -3763,6 +3739,9 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     // ppcoin: check proof-of-stake
     if (pblock->IsProofOfStake())
     {
+        // ppcoin: record proof-of-stake hash value
+        if (!mapProofOfStake.count(block.GetHash()))
+            error("AddToBlockIndex() : hashProofOfStake not found in map");        
         pindex->SetProofOfStake();
         pindex->prevoutStake = block.vtx[1]->vin[0].prevout;
         pindex->nStakeTime = block.vtx[1]->nTime;
@@ -3774,9 +3753,11 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
             return error("AcceptBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
 
         setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));
+
+        // use PoS hash for proof
+        pindex->hashProofOfStake = UintToArith256(mapProofOfStake[block.GetHash()]);
     }
-
-
+    
     if (!CheckBlock(block, state, chainparams.GetConsensus()) ||
         !ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindex->pprev)) {
         if (state.IsInvalid() && !state.CorruptionPossible()) {
@@ -4638,7 +4619,6 @@ bool CChainState::LoadGenesisBlock(const CChainParams& chainparams)
     } catch (const std::runtime_error& e) {
         return error("%s: failed to write genesis block: %s", __func__, e.what());
     }
-
     return true;
 }
 
