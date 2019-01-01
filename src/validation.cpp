@@ -2086,15 +2086,10 @@ unsigned int ComputedMinStake(unsigned int nBase, int64_t nTime, unsigned int nB
 
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
-    std::string xxx1 = Params().ProofOfStakeLimit().GetHex();
-    std::string xxx2 = Params().ProofOfWorkLimit().GetHex();
-
-
     // Proof-of-Stake blocks has own target limit since nVersion=3 supermajority on mainNet and always on testNet
     arith_uint256 bnTargetLimit = fProofOfStake ? Params().ProofOfStakeLimit() : Params().ProofOfWorkLimit();
         
     if (pindexLast == NULL) {
-        unsigned int xxxx = bnTargetLimit.GetCompact();
         return bnTargetLimit.GetCompact(); // genesis block
     }
 

@@ -136,9 +136,6 @@ static bool SelectBlockFromCandidates(
         // the energy efficiency property
         if (pindex->IsProofOfStake())
             hashSelection >>= 32;
-        
-        std::string strHashSelectionNew = hashSelection.GetHex();
-        std::string strHashBest = hashBest.GetHex();
                 
         if (fSelected && hashSelection < hashBest)
         {
@@ -381,11 +378,7 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     // We need to convert to uint512 to prevent overflow when multiplying by 1st block coins
     base_uint<512> targetProofOfStake512(bnTargetPerCoinDay.GetHex());
     targetProofOfStake512 *= bnCoinDayWeight;
-
-    std::string bdw = bnCoinDayWeight.GetHex();
-    std::string ctd = bnTargetPerCoinDay.GetHex();
-    std::string target = targetProofOfStake512.GetHex();
-
+    
     // Calculate hash
     CDataStream ss(SER_GETHASH, 0);
     uint64_t nStakeModifier = 0;
@@ -418,14 +411,10 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
             nTimeBlockFrom, nTxPrevOffset, txPrev->nTime, prevout.n, nTimeTx,
             hashProofOfStake.ToString().c_str());
     }
-
-    std::string hashProof = hashProofOfStake.GetHex();
-
+    
     // We need to convert type so it can be compared to target
     base_uint<512> hashProofOfStake512(hashProofOfStake.GetHex());
-
-    std::string hashProof512 = hashProofOfStake512.GetHex();
-
+    
     // Now check if proof-of-stake hash meets target protocol
     if (hashProofOfStake512 > targetProofOfStake512)
     {
