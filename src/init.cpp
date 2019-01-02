@@ -48,6 +48,7 @@
 #include <walletinitinterface.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <pos.h>
 
 #ifndef WIN32
 #include <signal.h>

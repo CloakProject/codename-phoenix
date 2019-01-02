@@ -853,7 +853,7 @@ public:
         vBlockHashesToAnnounce.push_back(hash);
     }
 
-    void AskFor(const CInv& inv);
+    void AskFor(const CInv& inv, bool fImmediateRetry = false);
 
     void CloseSocketDisconnect();
 
