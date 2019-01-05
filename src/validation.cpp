@@ -3713,7 +3713,7 @@ bool CheckBlockSignature(const CBlock& block, const Consensus::Params& consensus
         const CTxOut& txout = block.vtx[1]->vout[1];
         if (!Solver(txout.scriptPubKey, whichType, vSolutions))
         {
-            LogPrintf("CheckBlockSignature: Bad Block - wrong signature\n");
+            LogPrintf("CheckBlockSignature: Bad Block - wrong PoS signature\n");
             return false;
         }
 
@@ -3727,7 +3727,10 @@ bool CheckBlockSignature(const CBlock& block, const Consensus::Params& consensus
         {
             const CTxOut& txout = block.vtx[0]->vout[i];
             if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+            {
+                LogPrintf("CheckBlockSignature: Bad Block - wrong PoW signature\n");
                 return false;
+            }
 
             typedef std::vector<unsigned char> valtype;
 
