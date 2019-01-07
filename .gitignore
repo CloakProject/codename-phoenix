@@ -149,3 +149,5 @@ osx_volname
 dist/
 *.background.tiff
 *.user
+build_msvc/go1.bat
+build_msvc/go2.bat
