@@ -7,6 +7,8 @@
 
 #include <tinyformat.h>
 
+const std::string CURRENCY_UNIT = "CLOAK";
+
 CFeeRate::CFeeRate(const CAmount& nFeePaid, size_t nBytes_)
 {
     assert(nBytes_ <= uint64_t(std::numeric_limits<int64_t>::max()));
