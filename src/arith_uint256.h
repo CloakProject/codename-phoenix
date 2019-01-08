@@ -24,7 +24,8 @@ public:
 template<unsigned int BITS>
 class base_uint
 {
-    friend class base_uint;
+    friend class arith_uint512;
+    friend class arith_uint256;
 protected:
     static constexpr int WIDTH = BITS / 32;
     uint32_t pn[WIDTH];
@@ -45,16 +46,7 @@ public:
         for (int i = 0; i < WIDTH; i++)
             pn[i] = b.pn[i];
     }
-
-    template<unsigned int B>
-    static base_uint from_other_size(const base_uint<B>& b)
-    {
-	base_uint ret;
-	for (int i = 0; i < std::min((int)WIDTH, (int)b.WIDTH); i++)
-	    ret.pn[i] = b.pn[i];
-	return ret;
-    }
-
+    
     base_uint& operator=(const base_uint& b)
     {
         for (int i = 0; i < WIDTH; i++)
@@ -274,6 +266,9 @@ public:
     }
 };
 
+class arith_uint256;
+class arith_uint512;
+
 /** 256-bit unsigned big integer. */
 class arith_uint256 : public base_uint<256> {
 public:
@@ -281,7 +276,6 @@ public:
     arith_uint256(const base_uint<256>& b) : base_uint<256>(b) {}
     arith_uint256(uint64_t b) : base_uint<256>(b) {}
     explicit arith_uint256(const std::string& str) : base_uint<256>(str) {}
-
     /**
      * The "compact" format is a representation of a whole
      * number N using an unsigned 32bit number similar to a
@@ -307,6 +301,15 @@ public:
 
     friend uint256 ArithToUint256(const arith_uint256 &);
     friend arith_uint256 UintToArith256(const uint256 &);
+    
+    static base_uint<256> Arith256FromArith512(const base_uint<512>& b)
+    {
+        base_uint<256> ret;
+        
+        for (unsigned int i = 0; i < (unsigned int)ret.WIDTH; i++)
+	    ret.pn[i] = b.pn[i];
+	return ret;
+    }
 };
 
 uint256 ArithToUint256(const arith_uint256 &);

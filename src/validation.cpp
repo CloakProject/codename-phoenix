@@ -2132,7 +2132,7 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
     arith_uint512 bnTargetLimit512 = arith_uint512(bnTargetLimit.GetHex());
     if (bnNew512 > bnTargetLimit512)
         bnNew512 = bnTargetLimit512;
-    bnNew = arith_uint256::from_other_size(bnNew512);
+    bnNew = arith_uint256::Arith256FromArith512(bnNew512);
     return bnNew.GetCompact();
 }
 
