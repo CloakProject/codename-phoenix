@@ -251,6 +251,16 @@ bool static CheckMinimalPush(const valtype& data, opcodetype opcode) {
     return true;
 }
 
+int Find(CScript& script, opcodetype op)
+{
+    int nFound = 0;
+    opcodetype opcode;
+    for (CScript::const_iterator pc = script.begin(); pc != script.end() && script.GetOp(pc, opcode);)
+        if (opcode == op)
+            ++nFound;
+    return nFound;
+}
+
 int FindAndDelete(CScript& script, const CScript& b)
 {
     int nFound = 0;
@@ -1634,7 +1644,7 @@ uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn
     // In case concatenating two scripts ends up with two codeseparators,
     // or an extra one at the end, this prevents all those possible incompatibilities.
     CScript tscript = scriptCode;
-    tscript.FindAndDelete(CScript(OP_CODESEPARATOR));
+    FindAndDelete(tscript, CScript(OP_CODESEPARATOR));
 
     // Blank out other inputs' signatures
     for (unsigned int i = 0; i < txTmp.vin.size(); i++)
