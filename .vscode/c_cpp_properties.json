@@ -1,0 +1,37 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "defines": [],
+            "intelliSenseMode": "gcc-x64",
+            "limitSymbolsToIncludedHeaders": true,
+            "databaseFilename": "",
+            "path": [
+                "/usr/include/c++/6",
+                "/usr/include/x86_64-linux-gnu/c++/6",
+                "/usr/include/c++/6/backward",
+                "/usr/lib/gcc/x86_64-linux-gnu/6/include",
+                "/usr/local/include",
+                "/usr/lib/gcc/x86_64-linux-gnu/6/include-fixed",
+                "/usr/include/x86_64-linux-gnu",
+                "/usr/include",
+                "${workspaceRoot}"
+            ]            
+        },
+        {
+            "name": "Mac",
+            "defines": [],
+            "intelliSenseMode": "clang-x64",
+            "limitSymbolsToIncludedHeaders": true,
+            "databaseFilename": "",
+            "path": [
+                "/usr/include/c++/6",
+                "/usr/include/c++/6/backward",
+                "/usr/local/include",
+                "/usr/include",
+                "${workspaceRoot}"
+            ]            
+        }
+    ],
+    "version": 4
+}
