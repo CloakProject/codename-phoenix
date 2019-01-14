@@ -37,7 +37,7 @@ public:
 
     friend inline bool operator<(const TimeHash& a, const TimeHash& b)
     {
-        return a.first < b.first || a.first == b.first && a.second < b.second;
+        return a.first < b.first || (a.first == b.first && a.second < b.second);
     }       
 };
 
@@ -111,7 +111,7 @@ static bool SelectBlockFromCandidates(
     *pindexSelected = (const CBlockIndex*)0;
 
     std::vector<const CBlockIndex*> indexes;
-    for each(const std::pair<int64_t, arith_uint256>& item in vSortedByTimestamp)
+    for (const std::pair<int64_t, arith_uint256>& item : vSortedByTimestamp) 
     {
         if (!mapBlockIndex.count(ArithToUint256(item.second)))
             return error("SelectBlockFromCandidates: failed to find block index for candidate block %s", item.second.ToString().c_str());
@@ -240,7 +240,8 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
                 strSelectionMap.replace(pindex->nHeight - nHeightFirstCandidate, 1, "=");
             pindex = pindex->pprev;
         }
-        for each(const std::pair<uint256, const CBlockIndex*>& item in mapSelectedBlocks)
+        
+        for(const std::pair<uint256, const CBlockIndex*>& item : mapSelectedBlocks)
         {
             // 'S' indicates selected proof-of-stake blocks
             // 'W' indicates selected proof-of-work blocks
