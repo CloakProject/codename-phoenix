@@ -82,6 +82,8 @@ struct Params {
     unsigned int nStakeMinAge;
     unsigned int nStakeMaxAge;
     unsigned int nStakeTargetSpacing;
+    unsigned int nStakeModierInterval;
+
 
 };
 } // namespace Consensus
