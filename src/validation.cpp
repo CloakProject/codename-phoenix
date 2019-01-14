@@ -4201,7 +4201,6 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
 bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool fIsProofOfStake, bool *fNewBlock)
 {
     AssertLockNotHeld(cs_main);
-
     {
         uint256 blockHash = pblock->GetHash();
         if (mapBlockIndex.find(blockHash) != mapBlockIndex.end())
