@@ -3792,19 +3792,17 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
 bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool fIsProofOfStake, bool *fNewBlock)
 {
     AssertLockNotHeld(cs_main);
-
     {
-        /*
         uint256 blockHash = pblock->GetHash();
         if (mapBlockIndex.find(blockHash) != mapBlockIndex.end())
             return error("ProcessBlock() : already have block %d %s", mapBlockIndex[blockHash]->nHeight, blockHash.ToString().substr(0, 20).c_str());
         if (mapOrphanBlocks.find(blockHash) != mapOrphanBlocks.end())
             return error("ProcessBlock() : already have block (orphan) %s", blockHash.ToString().substr(0, 20).c_str());
-*/
 
         CBlockIndex *pindex = nullptr;
         if (fNewBlock) *fNewBlock = false;
         CValidationState state;
+
         // Ensure that CheckBlock() passes before calling AcceptBlock, as
         // belt-and-suspenders.
         bool ret = CheckBlock(*pblock, state, chainparams.GetConsensus());
