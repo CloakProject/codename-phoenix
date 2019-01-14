@@ -82,6 +82,7 @@ public:
         consensus.nStakeMinAge = 60 * 60 * 1 * 1; // 1h, minimum age for coin age:  6h
         consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight:  4d 60*60*24*1
         consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
+        consensus.nStakeModierInterval = MODIFIER_INTERVAL;
 
         // Proof of work
         consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 20;
@@ -250,9 +251,10 @@ public:
 
         // Proof of stake
         consensus.nProofOfStakeLimit = ~arith_uint256("0") >> 2;
-        consensus.nStakeMinAge = 60 * 60 * 1 * 1; // 1h, minimum age for coin age:  6h
-        consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight:  4d 60*60*24*1
-        consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
+        consensus.nStakeMinAge = 2 * 60; // test net min age is 2 min
+        consensus.nStakeMaxAge = 6 * 60; // test net min age is 6 min
+        consensus.nStakeTargetSpacing = 60; // 60 sec block spacing
+        consensus.nStakeModierInterval = 60;
 
         // Proof of work
         consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 2;
@@ -276,7 +278,7 @@ public:
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x0000000000000037a8cd3e06cd5edbfe9dd1dbcc5dacab279376ef7cfc2b4c75"); //1354312
+        consensus.defaultAssumeValid = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000"); //1354312
 
 	pchMessageStart[0] = 0x27;
         pchMessageStart[1] = 0xF0;
@@ -295,11 +297,12 @@ public:
         vFixedSeeds.clear();
         vSeeds.clear();
         // nodes with support for servicebits filtering should be at the top
-        vSeeds.emplace_back("testnet-seed.bitcoin.jonasschnelli.ch");
-        vSeeds.emplace_back("seed.tbtc.petertodd.org");
-        vSeeds.emplace_back("seed.testnet.bitcoin.sprovoost.nl");
-        vSeeds.emplace_back("testnet-seed.bluematt.me"); // Just a static list of stable node(s), only supports x9
-
+        
+        vSeeds.emplace_back("testnet1.cloakcoin.com");
+        vSeeds.emplace_back("testnet2.cloakcoin.com");
+        vSeeds.emplace_back("testnet3.cloakcoin.com");
+        vSeeds.emplace_back("testnet4.cloakcoin.com"); 
+        
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
         base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,239);
@@ -317,7 +320,7 @@ public:
 
         checkpointData = {
             {
-                {546, uint256S("000000002a936ca763904c3c35fce2f3556c559c0214345d31b1bcebf76acb70")},
+                //{0, uint256S("0xe0b104aef9b6c0dd6e2e05a10fa2c7b34406c8be8b3e09e9135ef91e0c576c10")}
             }
         };
 

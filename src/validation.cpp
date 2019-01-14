@@ -3438,15 +3438,11 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block)
 
     pindexNew->nTimeMax = (pindexNew->pprev ? std::max(pindexNew->pprev->nTimeMax, pindexNew->nTime) : pindexNew->nTime);
     pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
-    pindexNew->nChainWork = (pindexNew->pprev ? pindexNew->pprev->nChainWork : 0) + GetBlockProof(*pindexNew);
     pindexNew->RaiseValidity(BLOCK_VALID_TREE);
     if (pindexBestHeader == nullptr || pindexBestHeader->nChainWork < pindexNew->nChainWork)
         pindexBestHeader = pindexNew;
 
-    // ppcoin: compute stake entropy bit for stake modifier
-
-    //LogPrintf("GetStakeEntropyBit: nHeight=%u hashBlock=%s nEntropyBit=%u\n", nHeight, GetHash().ToString().c_str(), nEntropyBit);
-
+    // ppcoin: compute stake entropy bit for stake modifier    
     unsigned int stakeBit = block.GetStakeEntropyBit(pindexNew->nHeight);
     if (!pindexNew->SetStakeEntropyBit(stakeBit))
         LogPrintf("AddToBlockIndex() : SetStakeEntropyBit() failed");
@@ -3603,7 +3599,6 @@ static bool CheckBlockHeader(const CBlockHeader& block, BlockValidationState& st
 bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig)
 {
     // These are checks that are independent of context.
-
     if (block.fChecked)
         return true;
 

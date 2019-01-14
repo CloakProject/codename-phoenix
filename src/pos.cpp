@@ -23,8 +23,6 @@
 #include <index/txindex.h>
 #include <validation.h>
 
-unsigned int nModifierInterval = MODIFIER_INTERVAL;
-
 // wrapper class for block timestamp/hash pair to enable custom sorting that matches the legacy Cloak codebase
 class TimeHash : public std::pair<int64_t, arith_uint256>
 {
@@ -67,6 +65,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits, unsigned int
 static int64_t GetStakeModifierSelectionIntervalSection(int nSection)
 {
     assert(nSection >= 0 && nSection < 64);
+    unsigned int nModifierInterval = Params().GetConsensus().nStakeModierInterval;
     int64_t a = nModifierInterval * 63 / (63 + ((63 - nSection) * (MODIFIER_INTERVAL_RATIO - 1)));
     return a;
 }
@@ -183,6 +182,8 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
         return error("ComputeNextStakeModifier: unable to get last modifier");
     
     LogPrint(BCLog::SELECTCOINS, "ComputeNextStakeModifier: prev modifier=0x%016x time=%s\n", nStakeModifier, DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nModifierTime).c_str());
+
+    unsigned int nModifierInterval = Params().GetConsensus().nStakeModierInterval;
     
     if (nModifierTime / nModifierInterval >= pindexPrev->GetBlockTime() / nModifierInterval)
         return true;
