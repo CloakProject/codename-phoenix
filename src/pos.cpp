@@ -266,7 +266,6 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
 // Get stake modifier checksum
 unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
 {
-    uint256 hashGenesisBlockTestnet = Params().GenesisBlock().GetHash();
     assert(pindex->pprev || pindex->GetBlockHash() == Params().GenesisBlock().GetHash());
     // Hash previous checksum with flags, hashProofOfStake and nStakeModifier
     CDataStream ss(SER_GETHASH, 0);
@@ -274,12 +273,9 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
         ss << pindex->pprev->nStakeModifierChecksum;
     ss << pindex->nFlags << pindex->hashProofOfStake << pindex->nStakeModifier;
     arith_uint256 hashChecksum = UintToArith256(Hash(ss.begin(), ss.end()));
-    uint64_t xx1 = hashChecksum.GetLow64();
-    uint64_t xx2 = ArithToUint256(hashChecksum).GetUint64(0);
     hashChecksum >>= (256 - 32);
     if (gArgs.GetBoolArg("-printstakemodifier", false))
         LogPrint(BCLog::SELECTCOINS, "stake checksum : 0x % 016x", ArithToUint256(hashChecksum).GetUint64(0));
-    unsigned int ux = hashChecksum.GetLow64();
     return hashChecksum.GetLow64();
 }
 
