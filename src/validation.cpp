@@ -4197,12 +4197,6 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
 {
     AssertLockNotHeld(cs_main);
     {
-        uint256 blockHash = pblock->GetHash();
-        if (mapBlockIndex.find(blockHash) != mapBlockIndex.end())
-            return error("ProcessBlock() : already have block %d %s", mapBlockIndex[blockHash]->nHeight, blockHash.ToString().substr(0, 20).c_str());
-        if (mapOrphanBlocks.find(blockHash) != mapOrphanBlocks.end())
-            return error("ProcessBlock() : already have block (orphan) %s", blockHash.ToString().substr(0, 20).c_str());
-
         CBlockIndex *pindex = nullptr;
         if (fNewBlock) *fNewBlock = false;
         BlockValidationState state;
