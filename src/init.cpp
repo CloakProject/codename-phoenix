@@ -1765,5 +1765,11 @@ bool AppInitMain()
 
     g_wallet_init_interface.Start(scheduler);
 
+#if ENABLE_WALLET
+    // Generate coins in the background
+    SetStaking(gArgs.GetBoolArg("-staking", true));
+    threadGroup.create_thread(boost::bind(&CloakStaker, boost::cref(chainparams)));
+#endif
+
     return true;
 }

@@ -118,6 +118,8 @@ inline bool IsSwitchChar(char c)
 #endif
 }
 
+void SetThreadPriority(int nPriority);
+
 enum class OptionsCategory {
     OPTIONS,
     CONNECTION,
