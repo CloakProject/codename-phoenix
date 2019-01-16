@@ -2032,5 +2032,11 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     StartupNotify(args);
 #endif
 
+#if ENABLE_WALLET
+    // Generate coins in the background
+    SetStaking(gArgs.GetBoolArg("-staking", true));
+    threadGroup.create_thread(boost::bind(&CloakStaker, boost::cref(chainparams)));
+#endif
+
     return true;
 }

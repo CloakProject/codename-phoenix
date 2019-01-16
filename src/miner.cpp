@@ -99,7 +99,7 @@ void BlockAssembler::resetBlock()
 Optional<int64_t> BlockAssembler::m_last_block_num_txs{nullopt};
 Optional<int64_t> BlockAssembler::m_last_block_weight{nullopt};
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fProofOfStake)
 {
     int64_t nTimeStart = GetTimeMicros();
 
@@ -452,4 +452,28 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 
     pblock->vtx[0] = MakeTransactionRef(std::move(txCoinbase));
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+}
+
+// proof of stake
+
+void SetStaking(bool mode) {
+    fStaking = mode;
+}
+
+bool GetStaking() {
+    return fStaking;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// Internal Staker
+//
+
+extern unsigned int nMinerSleep;
+
+void CloakStaker(const CChainParams& chainparams)
+{
+    LogPrintf("NavCoinStaker started\n");
+    SetThreadPriority(THREAD_PRIORITY_LOWEST);
+    RenameThread("navcoin-staker");
 }
