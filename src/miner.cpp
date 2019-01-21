@@ -474,7 +474,12 @@ extern unsigned int nMinerSleep;
 
 void CloakStaker(const CChainParams& chainparams)
 {
-    LogPrintf("NavCoinStaker started\n");
+    LogPrintf("CloakStaker started\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
-    RenameThread("navcoin-staker");
+    RenameThread("cloak-staker");
+
+    std::shared_ptr<CReserveScript> coinbaseScript;
+    GetMainSignals().GetScriptForMining(coinbaseScript);
+
+
 }

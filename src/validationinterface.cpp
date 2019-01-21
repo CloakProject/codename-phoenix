@@ -254,3 +254,7 @@ void CMainSignals::NewPoWValidBlock(const CBlockIndex *pindex, const std::shared
     LOG_EVENT("%s: block hash=%s", __func__, block->GetHash().ToString());
     m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.NewPoWValidBlock(pindex, block); });
 }
+
+void CMainSignals::GetScriptForMining(std::shared_ptr<CReserveScript>& script) {
+    m_internals->GetScriptForMining(script);
+}
