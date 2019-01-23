@@ -23,6 +23,8 @@
 
 #include <algorithm>
 #include <utility>
+#include <key.h>
+#include <wallet/crypter.h>
 
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
@@ -455,6 +457,68 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
 }
 
+typedef std::vector<unsigned char> valtype;
+
+#ifdef ENABLE_WALLET
+// ppcoin: sign block
+bool SignBlock(CBlock *pblock, const CCryptoKeyStore& keystore)
+{
+    std::vector<valtype> vSolutions;
+    txnouttype whichType;
+
+    if (!pblock->IsProofOfStake())
+    {
+        for (unsigned int i = 0; i < pblock->vtx[0]->vout.size(); i++)
+        {
+            const CTxOut& txout = pblock->vtx[0]->vout[i];
+
+            if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+                continue;
+
+            if (whichType == TX_PUBKEY)
+            {
+                // Sign
+                valtype& vchPubKey = vSolutions[0];
+                CKey key;
+
+                if (!keystore.GetKey(CKeyID(Hash160(vchPubKey)), key))
+                    continue;
+                if (memcmp(key.GetPubKey().data(), vchPubKey.data(), vchPubKey.size()) != 0)
+                    continue;
+                if (!key.Sign(pblock->GetHash(), pblock->vchBlockSig))
+                    continue;
+
+                return true;
+            }
+        }
+    }
+    else
+    {
+        const CTxOut& txout = pblock->vtx[1]->vout[1];
+
+        if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+            return false;
+
+        if (whichType == TX_PUBKEY)
+        {
+            // Sign
+            valtype& vchPubKey = vSolutions[0];
+            CKey key;
+
+            if (!keystore.GetKey(CKeyID(Hash160(vchPubKey)), key))
+                return false;
+            if (memcmp(key.GetPubKey().data(), vchPubKey.data(), vchPubKey.size()) != 0)
+                return false;
+
+            return key.Sign(pblock->GetHash(), pblock->vchBlockSig);
+        }
+    }
+
+    printf("Sign failed\n");
+    return false;
+}
+#endif
+
 // proof of stake
 
 void SetStaking(bool mode) {
@@ -481,5 +545,21 @@ void CloakStaker(const CChainParams& chainparams)
     std::shared_ptr<CReserveScript> coinbaseScript;
     GetMainSignals().GetScriptForMining(coinbaseScript);
 
+    try
+    {
+        while (true)
+        {
 
+        }
+    }
+    catch (const boost::thread_interrupted&)
+    {
+        LogPrintf("CloakStaker terminated\n");
+        throw;
+    }
+    catch (const std::runtime_error &e)
+    {
+        LogPrintf("CloakStaker runtime error: %s\n", e.what());
+        return;
+    }
 }
