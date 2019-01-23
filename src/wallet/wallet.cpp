@@ -3564,6 +3564,66 @@ void ReserveDestination::ReturnDestination()
     address = CNoDestination();
 }
 
+typedef std::vector<unsigned char> valtype;
+
+// ppcoin: sign block
+bool CWallet::SignBlock(std::shared_ptr<CBlock>& pblock)
+{
+    std::vector<valtype> vSolutions;
+    txnouttype whichType;
+
+    if (!pblock->IsProofOfStake())
+    {
+        for (unsigned int i = 0; i < pblock->vtx[0]->vout.size(); i++)
+        {
+            const CTxOut& txout = pblock->vtx[0]->vout[i];
+
+            if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+                continue;
+
+            if (whichType == TX_PUBKEY)
+            {
+                // Sign
+                valtype& vchPubKey = vSolutions[0];
+                CKey key;
+
+                if (!GetKey(CKeyID(Hash160(vchPubKey)), key))
+                    continue;
+                if (memcmp(key.GetPubKey().data(), vchPubKey.data(), vchPubKey.size()) != 0)
+                    continue;
+                if (!key.Sign(pblock->GetHash(), pblock->vchBlockSig))
+                    continue;
+
+                return true;
+            }
+        }
+    }
+    else
+    {
+        const CTxOut& txout = pblock->vtx[1]->vout[1];
+
+        if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+            return false;
+
+        if (whichType == TX_PUBKEY)
+        {
+            // Sign
+            valtype& vchPubKey = vSolutions[0];
+            CKey key;
+
+            if (!GetKey(CKeyID(Hash160(vchPubKey)), key))
+                return false;
+            if (memcmp(key.GetPubKey().data(), vchPubKey.data(), vchPubKey.size()) != 0)
+                return false;
+
+            return key.Sign(pblock->GetHash(), pblock->vchBlockSig);
+        }
+    }
+
+    printf("SignBlock failed\n");
+    return false;
+}
+
 void CWallet::LockCoin(const COutPoint& output)
 {
     AssertLockHeld(cs_wallet);

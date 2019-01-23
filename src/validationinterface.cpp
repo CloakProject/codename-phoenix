@@ -258,3 +258,8 @@ void CMainSignals::NewPoWValidBlock(const CBlockIndex *pindex, const std::shared
 void CMainSignals::GetScriptForMining(std::shared_ptr<CReserveScript>& script) {
     m_internals->GetScriptForMining(script);
 }
+
+bool CMainSignals::SignBlock(CBlock* block)
+{
+    return static_cast<bool>(m_internals->SignBlock(block));
+}

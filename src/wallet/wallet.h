@@ -1072,6 +1072,10 @@ public:
     bool DelAddressBook(const CTxDestination& address);
 
     unsigned int GetKeyPoolSize() const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
+    
+    const std::string& GetLabelName(const CScript& scriptPubKey) const;
+    void GetScriptForMining(std::shared_ptr<CReserveScript> &script);
+    bool SignBlock(std::shared_ptr<CBlock>& pblock);
 
     //! signify that a particular wallet feature is now used.
     void SetMinVersion(enum WalletFeature, WalletBatch* batch_in = nullptr) override;

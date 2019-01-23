@@ -20,6 +20,7 @@
 class CBlockIndex;
 class CChainParams;
 class CScript;
+class CCryptoKeyStore;
 
 namespace Consensus { struct Params; };
 
@@ -205,5 +206,10 @@ void RegenerateCommitments(CBlock& block);
 void CloakStaker(const CChainParams& chainparams);
 void SetStaking(bool mode);
 bool GetStaking();
+
+#ifdef ENABLE_WALLET
+// ppcoin: sign block
+bool SignBlock(CBlock *pblock, const CCryptoKeyStore& keystore);
+#endif
 
 #endif // BITCOIN_MINER_H
