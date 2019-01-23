@@ -30,6 +30,7 @@
 #include <utility>
 #include <key.h>
 #include <wallet/crypter.h>
+#include <wallet/wallet.h>
 
 // Unconfirmed transactions in the memory pool often depend on other
 // transactions in the memory pool. When we select transactions from the
@@ -103,6 +104,9 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 {
     int64_t nTimeStart = GetTimeMicros();
 
+    // ppcoin: if coinstake available add coinstake tx
+    static int64_t nLastCoinStakeSearchTime = GetAdjustedTime();  // only initialized at startup
+
     resetBlock();
 
     pblocktemplate.reset(new CBlockTemplate());
@@ -174,6 +178,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, fProofOfStake, chainparams.GetConsensus());
     pblock->nNonce         = 0;
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(*pblock->vtx[0]);
+
+    GetMainSignals().SignBlock(pblock);
 
     CValidationState state;
     if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
@@ -454,68 +460,6 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
     pblock->vtx[0] = MakeTransactionRef(std::move(txCoinbase));
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
 }
-
-typedef std::vector<unsigned char> valtype;
-
-#ifdef ENABLE_WALLET
-// ppcoin: sign block
-bool SignBlock(CBlock *pblock, const CCryptoKeyStore& keystore)
-{
-    std::vector<valtype> vSolutions;
-    txnouttype whichType;
-
-    if (!pblock->IsProofOfStake())
-    {
-        for (unsigned int i = 0; i < pblock->vtx[0]->vout.size(); i++)
-        {
-            const CTxOut& txout = pblock->vtx[0]->vout[i];
-
-            if (!Solver(txout.scriptPubKey, whichType, vSolutions))
-                continue;
-
-            if (whichType == TX_PUBKEY)
-            {
-                // Sign
-                valtype& vchPubKey = vSolutions[0];
-                CKey key;
-
-                if (!keystore.GetKey(CKeyID(Hash160(vchPubKey)), key))
-                    continue;
-                if (memcmp(key.GetPubKey().data(), vchPubKey.data(), vchPubKey.size()) != 0)
-                    continue;
-                if (!key.Sign(pblock->GetHash(), pblock->vchBlockSig))
-                    continue;
-
-                return true;
-            }
-        }
-    }
-    else
-    {
-        const CTxOut& txout = pblock->vtx[1]->vout[1];
-
-        if (!Solver(txout.scriptPubKey, whichType, vSolutions))
-            return false;
-
-        if (whichType == TX_PUBKEY)
-        {
-            // Sign
-            valtype& vchPubKey = vSolutions[0];
-            CKey key;
-
-            if (!keystore.GetKey(CKeyID(Hash160(vchPubKey)), key))
-                return false;
-            if (memcmp(key.GetPubKey().data(), vchPubKey.data(), vchPubKey.size()) != 0)
-                return false;
-
-            return key.Sign(pblock->GetHash(), pblock->vchBlockSig);
-        }
-    }
-
-    printf("Sign failed\n");
-    return false;
-}
-#endif
 
 // proof of stake
 

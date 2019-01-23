@@ -18,6 +18,7 @@
 class CBlockIndex;
 class CChainParams;
 class CScript;
+class CCryptoKeyStore;
 
 namespace Consensus { struct Params; };
 
@@ -202,5 +203,10 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
 void CloakStaker(const CChainParams& chainparams);
 void SetStaking(bool mode);
 bool GetStaking();
+
+#ifdef ENABLE_WALLET
+// ppcoin: sign block
+bool SignBlock(CBlock *pblock, const CCryptoKeyStore& keystore);
+#endif
 
 #endif // BITCOIN_MINER_H
