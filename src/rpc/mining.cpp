@@ -195,6 +195,28 @@ static bool getScriptFromDescriptor(const std::string& descriptor, CScript& scri
             // Else take the 2nd script, since it is p2pkh
             script = scripts.at(1);
         }
+        // cloak - sign the block
+        bool signedOk = false;
+        GetMainSignals().SignBlock(pblock, signedOk);
+
+        // cloak: test block validity outside of CreateNewBlock so that mroot is set and block is signed
+        CValidationState state;
+        CBlockIndex* pindexPrev = chainActive.Tip();
+        if (!TestBlockValidity(state, Params(), *pblock, pindexPrev, true, true, true)) {
+            throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
+        }
+
+        std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
+        if (!ProcessNewBlock(Params(), shared_pblock, true, shared_pblock->IsProofOfStake(), nullptr))
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
+        ++nHeight;
+        blockHashes.push_back(pblock->GetHash().GetHex());
+
+        //mark script as important because it was used at least for one coinbase output if the script came from the wallet
+        if (keepScript)
+        {
+            coinbaseScript->KeepScript();
+        }
 
         return true;
     } else {

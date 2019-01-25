@@ -175,7 +175,7 @@ protected:
     virtual void NewPoWValidBlock(const CBlockIndex *pindex, const std::shared_ptr<const CBlock>& block) {};
 
     virtual void GetScriptForMining(std::shared_ptr<CReserveScript>&) {}
-    virtual bool SignBlock(CBlock*) { return false; }
+    virtual void SignBlock(CBlock*, bool &result) {}
     
     friend void ::RegisterValidationInterface(CValidationInterface*);
     friend void ::UnregisterValidationInterface(CValidationInterface*);
@@ -214,7 +214,7 @@ public:
     void Broadcast(int64_t nBestBlockTime, CConnman* connman);
     void BlockChecked(const CBlock&, const BlockValidationState&);
     void GetScriptForMining(std::shared_ptr<CReserveScript>&);
-    bool SignBlock(CBlock*);
+    void SignBlock(CBlock* pblock, bool &result);
     void NewPoWValidBlock(const CBlockIndex *, const std::shared_ptr<const CBlock>&);
 };
 

@@ -1075,7 +1075,12 @@ public:
     
     const std::string& GetLabelName(const CScript& scriptPubKey) const;
     void GetScriptForMining(std::shared_ptr<CReserveScript> &script);
+<<<<<<< HEAD
     bool SignBlock(std::shared_ptr<CBlock>& pblock);
+=======
+
+    void SignBlock(CBlock* pblock, bool &result);
+>>>>>>> f369b0238 (Some PoW mining pipeline reworking/refactoring.)
 
     //! signify that a particular wallet feature is now used.
     void SetMinVersion(enum WalletFeature, WalletBatch* batch_in = nullptr) override;

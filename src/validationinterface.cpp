@@ -259,7 +259,7 @@ void CMainSignals::GetScriptForMining(std::shared_ptr<CReserveScript>& script) {
     m_internals->GetScriptForMining(script);
 }
 
-bool CMainSignals::SignBlock(CBlock* block)
+void CMainSignals::SignBlock(CBlock* pblock, bool &result)
 {
-    return static_cast<bool>(m_internals->SignBlock(block));
+    m_internals->SignBlock(pblock, result);
 }
