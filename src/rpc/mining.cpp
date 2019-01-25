@@ -136,6 +136,18 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
         if (pblock->nNonce == nInnerLoopCount) {
             continue;
         }
+
+        // cloak - sign the block
+        bool signedOk = false;
+        GetMainSignals().SignBlock(pblock, signedOk);
+
+        // cloak: test block validity outside of CreateNewBlock so that mroot is set and block is signed
+        CValidationState state;
+        CBlockIndex* pindexPrev = chainActive.Tip();
+        if (!TestBlockValidity(state, Params(), *pblock, pindexPrev, true, true, true)) {
+            throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
+        }
+
         std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
         if (!ProcessNewBlock(Params(), shared_pblock, true, shared_pblock->IsProofOfStake(), nullptr))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");

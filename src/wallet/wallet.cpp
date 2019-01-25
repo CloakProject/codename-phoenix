@@ -3746,10 +3746,12 @@ void CWallet::GetScriptForMining(std::shared_ptr<CReserveScript> &script)
 typedef std::vector<unsigned char> valtype;
 
 // ppcoin: sign block
-bool CWallet::SignBlock(std::shared_ptr<CBlock>& pblock)
+void CWallet::SignBlock(CBlock* pblock, bool &result)
 {
     std::vector<valtype> vSolutions;
     txnouttype whichType;
+
+    result = false;
 
     if (!pblock->IsProofOfStake())
     {
@@ -3773,7 +3775,8 @@ bool CWallet::SignBlock(std::shared_ptr<CBlock>& pblock)
                 if (!key.Sign(pblock->GetHash(), pblock->vchBlockSig))
                     continue;
 
-                return true;
+                result = true;
+                return;
             }
         }
     }
@@ -3782,7 +3785,10 @@ bool CWallet::SignBlock(std::shared_ptr<CBlock>& pblock)
         const CTxOut& txout = pblock->vtx[1]->vout[1];
 
         if (!Solver(txout.scriptPubKey, whichType, vSolutions))
-            return false;
+        {
+            result = false;
+            return;
+        }
 
         if (whichType == TX_PUBKEY)
         {
@@ -3791,16 +3797,23 @@ bool CWallet::SignBlock(std::shared_ptr<CBlock>& pblock)
             CKey key;
 
             if (!GetKey(CKeyID(Hash160(vchPubKey)), key))
-                return false;
+            {
+                result = false;
+                return;
+            }
             if (memcmp(key.GetPubKey().data(), vchPubKey.data(), vchPubKey.size()) != 0)
-                return false;
+            {
+                result = false;
+                return;
+            }
 
-            return key.Sign(pblock->GetHash(), pblock->vchBlockSig);
+            result = key.Sign(pblock->GetHash(), pblock->vchBlockSig);
+            return;
         }
     }
 
     printf("SignBlock failed\n");
-    return false;
+    return;
 }
 
 void CWallet::LockCoin(const COutPoint& output)
