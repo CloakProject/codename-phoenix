@@ -1361,6 +1361,14 @@ bool ReadRawBlockFromDisk(std::vector<uint8_t>& block, const CBlockIndex* pindex
 
 CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
 {
+    int64_t nSubsidy = 496 * COIN;
+
+    if (nHeight <= 50)
+        nSubsidy = 1 * COIN; // first 50 blocks are 1 coin reward
+
+    return nSubsidy;
+
+    /*
     int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;
     // Force block reward to zero when right shift is undefined.
     if (halvings >= 64)
@@ -1370,6 +1378,7 @@ CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
     // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
     nSubsidy >>= halvings;
     return nSubsidy;
+    */
 }
 
 CoinsViews::CoinsViews(
@@ -2157,8 +2166,9 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
         return state.DoS(100, error("AcceptBlock() : No proof-of-work allowed anymore (height = %d)", pindex->nHeight));
 
     // Check proof of stake
-    if (block.nBits != GetNextTargetRequired(pindex->pprev, block.IsProofOfStake())) {
-        return state.DoS(1, error("ConnectBlock() : incorrect %s at height %d (%d)", !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev ? pindex->pprev->nHeight : 0, block.nBits), REJECT_INVALID, "bad-diffbits");
+    uint32_t nextWork = GetNextTargetRequired(pindex->pprev, block.IsProofOfStake());
+    if (block.nBits != nextWork) {
+        return state.DoS(1, error("ConnectBlock() : incorrect %s at height %d (got %d wanted %d)", !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev ? pindex->pprev->nHeight : 0, block.nBits, nextWork), REJECT_INVALID, "bad-diffbits");
     }
 
     // Check it again in case a previous version let a bad block in
@@ -2432,7 +2442,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint(BCLog::BENCH, "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
 
-    CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
+    CAmount blockReward = GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
     if (block.vtx[0]->GetValueOut() > blockReward) {
         LogPrintf("ERROR: ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)\n", block.vtx[0]->GetValueOut(), blockReward);
         return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-amount");
