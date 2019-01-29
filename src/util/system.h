@@ -128,6 +128,13 @@ inline bool IsSwitchChar(char c)
 #endif
 }
 
+#ifndef WIN32
+#define THREAD_PRIORITY_LOWEST          PRIO_MAX
+#define THREAD_PRIORITY_BELOW_NORMAL    2
+#define THREAD_PRIORITY_NORMAL          0
+#define THREAD_PRIORITY_ABOVE_NORMAL    0
+#endif
+
 void SetThreadPriority(int nPriority);
 
 enum class OptionsCategory {
