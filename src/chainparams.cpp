@@ -101,13 +101,13 @@ public:
         // Deployment of BIP68, BIP112, and BIP113.
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
 
-	    consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1777593600; // May 1st, 2026
-        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1809129600;   // May 1st, 2027
+	    consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 0; // disabled
+        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 0; // disabled
 
         // Deployment of SegWit (BIP141, BIP143, and BIP147)
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
-        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 1794700800; // November 15th, 2026.
-        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1826236800;      // November 15th, 2027.
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 0; // disabled
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 0; // disabled
 
         // The best chain should have at least this much work.
         //consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000028822fef1c230963535a90d");
@@ -265,14 +265,13 @@ public:
 
         // Deployment of BIP68, BIP112, and BIP113.
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
-
-        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1777593600; // May 1st, 2026
-        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1809129600;   // May 1st, 2027
+        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 0; // disabled
+        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 0; // disabled
 
         // Deployment of SegWit (BIP141, BIP143, and BIP147)
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
-        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 1794700800; // November 15th, 2026.
-        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1826236800;      // November 15th, 2027.
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 0; // disabled
+        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 0; // disabled
 
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
