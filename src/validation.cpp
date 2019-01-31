@@ -3631,12 +3631,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 
     if (block.IsProofOfStake())
     {
-	// Second transaction must be coinstake, the rest must not be
-	if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
-		return state.DoS(100, error("CheckBlock() : second tx is not coinstake"));
-	for (unsigned int i = 2; i < block.vtx.size(); i++)
-		if (block.vtx[i]->IsCoinStake())
-			return state.DoS(100, error("CheckBlock() : more than one coinstake"));
+	    // Second transaction must be coinstake, the rest must not be
+	    if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
+		    return state.DoS(100, error("CheckBlock() : second tx is not coinstake"));
+	    for (unsigned int i = 2; i < block.vtx.size(); i++)
+		    if (block.vtx[i]->IsCoinStake())
+			    return state.DoS(100, error("CheckBlock() : more than one coinstake"));
     }
 
     // All potential-corruption validation must be done before we do any
@@ -4120,9 +4120,8 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     bool fTooFarAhead = (pindex->nHeight > int(m_chain.Height() + MIN_BLOCKS_TO_KEEP));
 
     // ppcoin: check coinbase timestamp isn't too early
-    // note: rzr - this should probably move somewhere and log a DoS attempt!
     if (pblock->GetBlockTime() > (int64_t)pblock->vtx[0]->nTime + GetMaxClockDrift(pindex->nHeight))
-        return error("AcceptBlock() : coinbase timestamp is too early");
+        return state.DoS(50, false, REJECT_INVALID, "block-cbtx-early", false, "coinbase timestamp is too early");
 
     // TODO: Decouple this function from the block download logic by removing fRequested
     // This requires some new chain data structure to efficiently look up if a
