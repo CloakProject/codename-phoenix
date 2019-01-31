@@ -85,6 +85,12 @@ static constexpr unsigned int STANDARD_LOCKTIME_VERIFY_FLAGS = LOCKTIME_VERIFY_S
 
 static const int CUTOFF_POW_BLOCK = 10080;
 
+// ppcoin: clock drift
+static const int64_t nClockDriftSwitchHeight = 59860;
+static const int64_t nMaxClockDriftOrig = 2 * 60 * 60;
+static const int64_t nMaxClockDrift = 8 * 60; // 8 minutes // 2 * 60 * 60; // two hours
+inline int64_t GetMaxClockDrift(int nHeight) { return nHeight > nClockDriftSwitchHeight ? nMaxClockDrift : nMaxClockDriftOrig; }
+
 // Proof of stake
 static const int64_t MAX_MINT_PROOF_OF_STAKE = 0.06 * COIN;
 

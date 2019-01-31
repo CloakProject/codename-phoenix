@@ -54,9 +54,9 @@ public:
     // ppcoin: entropy bit for stake modifier if chosen by modifier
     unsigned int GetStakeEntropyBit(unsigned int nHeight) const
     {
-	// Take last bit of block hash as entropy bit
-	unsigned int nEntropyBit = ((GetHash().GetUint64(0)) & 1llu);
-	return nEntropyBit;
+		// Take last bit of block hash as entropy bit
+		unsigned int nEntropyBit = ((GetHash().GetUint64(0)) & 1llu);
+		return nEntropyBit;
     }
 
     uint256 GetHash() const;
@@ -100,7 +100,7 @@ public:
     {
         CBlockHeader::SetNull();
         vtx.clear();
-	vchBlockSig.clear();
+		vchBlockSig.clear();
         fChecked = false;
     }
 
@@ -133,6 +133,16 @@ public:
     {
         return IsProofOfStake() ? std::make_pair(vtx[1]->vin[0].prevout, vtx[1]->nTime) : std::make_pair(COutPoint(), (unsigned int)0);
     }
+
+	// ppcoin: get max transaction timestamp
+	int64_t GetMaxTransactionTime() const
+	{
+		int64_t maxTransactionTime = 0;
+		for (const CTransactionRef& tx : vtx) {
+			maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx->nTime);
+		}
+		return maxTransactionTime;
+	}
 };
 
 /** Describes a place in the block chain to another node such that if the

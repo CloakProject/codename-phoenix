@@ -2163,7 +2163,7 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     int64_t nStakeReward = 0;
     
     if (pindex->IsProofOfWork() && pindex->nHeight > CUTOFF_POW_BLOCK)
-        return state.DoS(100, error("AcceptBlock() : No proof-of-work allowed anymore (height = %d)", pindex->nHeight));
+        return state.DoS(100, error("ConnectBlock() : No proof-of-work allowed anymore (height = %d)", pindex->nHeight));
 
     // Check proof of stake
     uint32_t nextWork = GetNextTargetRequired(pindex->pprev, block.IsProofOfStake());
@@ -4118,6 +4118,11 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     // regardless of whether pruning is enabled; it should generally be safe to
     // not process unrequested blocks.
     bool fTooFarAhead = (pindex->nHeight > int(m_chain.Height() + MIN_BLOCKS_TO_KEEP));
+
+    // ppcoin: check coinbase timestamp isn't too early
+    // note: rzr - this should probably move somewhere and log a DoS attempt!
+    if (pblock->GetBlockTime() > (int64_t)pblock->vtx[0]->nTime + GetMaxClockDrift(pindex->nHeight))
+        return error("AcceptBlock() : coinbase timestamp is too early");
 
     // TODO: Decouple this function from the block download logic by removing fRequested
     // This requires some new chain data structure to efficiently look up if a

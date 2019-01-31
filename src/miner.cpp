@@ -164,11 +164,12 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Create coinbase transaction.
     CMutableTransaction coinbaseTx;
+    coinbaseTx.nTime = GetAdjustedTime(); // ppcoin: set tx time
     coinbaseTx.vin.resize(1);
     coinbaseTx.vin[0].prevout.SetNull();
     coinbaseTx.vout.resize(1);
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
-    coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());    
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
@@ -178,7 +179,18 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Fill in header
     pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
-    UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
+
+    // ppcoin: set time
+    // todo: this PoS handler is present in legacy codebase but it looks like the lines below override the value - check!
+    if (pblock->IsProofOfStake())
+        pblock->nTime = pblock->vtx[1]->nTime; // same as coinstake timestamp
+
+    pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
+    pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - GetMaxClockDrift(pindexPrev->nHeight + 1));
+
+    if (pblock->IsProofOfWork())
+        UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
+
     //pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, fProofOfStake, chainparams.GetConsensus());
     pblock->nBits = GetNextTargetRequired(pindexPrev, fProofOfStake);
     pblock->nNonce         = 0;
