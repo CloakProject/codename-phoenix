@@ -2787,6 +2787,9 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         }
         bool fNewBlock = false;
 
+        // ppcoin: prune excessive orphan blocks
+        PruneOrphanBlocks();
+
         // ppcoin: verify hash target and signature of coinstake tx
         if (pblock->IsProofOfStake())
         {
