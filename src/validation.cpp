@@ -224,6 +224,9 @@ public:
 
     void UnloadBlockIndex();
 
+    // Remove a random orphan block (which does not have any dependent orphans).
+    void PruneOrphanBlocks();
+
 private:
     bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace);
     bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions &disconnectpool);
@@ -240,9 +243,7 @@ private:
 
     void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state);
     CBlockIndex* FindMostWorkChain() EXCLUSIVE_LOCKS_REQUIRED(cs_main);
-    void ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pindexNew, const CDiskBlockPos& pos, const Consensus::Params& consensusParams) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
-
-
+    void ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pindexNew, const CDiskBlockPos& pos, const Consensus::Params& consensusParams) EXCLUSIVE_LOCKS_REQUIRED(cs_main);    
     bool RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 } g_chainstate;
 
@@ -2085,6 +2086,11 @@ unsigned int ComputedMinStake(unsigned int nBase, int64_t nTime, unsigned int nB
     return ComputeMaxBits(Params().ProofOfStakeLimit(), nBase, nTime);
 }
 
+void PruneOrphanBlocks()
+{
+    g_chainstate.PruneOrphanBlocks();
+}
+
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
     // Proof-of-Stake blocks has own target limit since nVersion=3 supermajority on mainNet and always on testNet
@@ -2136,8 +2142,6 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
     bnNew = arith_uint256::Arith256FromArith512(bnNew512);
     return bnNew.GetCompact();
 }
-
-
 
 static int64_t nTimeCheck = 0;
 static int64_t nTimeForks = 0;
@@ -4153,6 +4157,9 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
         pindex->prevoutStake = block.vtx[1]->vin[0].prevout;
         pindex->nStakeTime = block.vtx[1]->nTime;
 
+        // note: ppcoin has "ProcessBlock() : block uses the same stake as the best block. Canceling the best block" here.
+        // this has not been added as yet as it is uncertain if this will cause a consensus based fork.
+
         // Limited duplicity on stake: prevents block flood attack
         // Duplicate stake allowed only when there is orphan child block
         uint256 blockHash = pblock->GetHash();
@@ -4725,6 +4732,30 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     LogPrintf("No coin database inconsistencies in last %i blocks (%i transactions)\n", block_count, nGoodTransactions);
 
     return true;
+}
+
+void CChainState::PruneOrphanBlocks()
+{
+    if (mapOrphanBlocksByPrev.size() <= (size_t)std::max((int64_t)0, gArgs.GetArg("-maxorphanblocks", DEFAULT_MAX_ORPHAN_BLOCKS)))
+        return;
+
+    // Pick a random orphan block.
+    int pos = GetRandInt(mapOrphanBlocksByPrev.size() - 1);
+    BlockMap::iterator it = mapOrphanBlocksByPrev.begin();
+    while (pos--) it++;
+
+    // As long as this block has other orphans depending on it, move to one of those successors.
+    do {
+        BlockMap::iterator it2 = mapOrphanBlocksByPrev.find(it->second->GetBlockHash());
+        if (it2 == mapOrphanBlocksByPrev.end())
+            break;
+        it = it2;
+    } while (1);
+
+    uint256 hash = it->second->GetBlockHash();
+    delete it->second;
+    mapOrphanBlocksByPrev.erase(it);
+    mapOrphanBlocks.erase(hash);
 }
 
 /** Apply the effects of a block on the utxo cache, ignoring that it may already have been applied. */

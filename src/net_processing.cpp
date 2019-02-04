@@ -3552,6 +3552,9 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         }
         bool fNewBlock = false;
 
+        // ppcoin: prune excessive orphan blocks
+        PruneOrphanBlocks();
+
         // ppcoin: verify hash target and signature of coinstake tx
         // TODO: implement PoS properly
         if (pblock->IsProofOfStake()) {

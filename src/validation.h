@@ -52,6 +52,12 @@ struct DisconnectedBlockTransactions;
 struct PrecomputedTransactionData;
 struct LockPoints;
 
+// note: double check these values for cloak!
+
+/** Default for -whitelistrelay. */
+static const bool DEFAULT_WHITELISTRELAY = true;
+/** Default for -whitelistforcerelay. */
+static const bool DEFAULT_WHITELISTFORCERELAY = true;
 /** Default for -minrelaytxfee, minimum relay fee for transactions */
 static const unsigned int DEFAULT_MIN_RELAY_TX_FEE = 1000;
 /** Default for -limitancestorcount, max number of in-mempool ancestors */
@@ -94,6 +100,9 @@ static const unsigned int DEFAULT_CHECKLEVEL = 3;
 // one 128MB block file + added 15% undo data = 147MB greater for a total of 545MB
 // Setting the target to >= 550 MiB will make it likely we can respect the target.
 static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
+
+/** Default for -maxorphanblocks, maximum number of orphan blocks kept in memory */
+static const unsigned int DEFAULT_MAX_ORPHAN_BLOCKS = 750;
 
 struct BlockHasher
 {
@@ -1038,5 +1047,7 @@ inline bool IsBlockPruned(const CBlockIndex* pblockindex)
 }
 
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake);
+
+void PruneOrphanBlocks();
 
 #endif // BITCOIN_VALIDATION_H
