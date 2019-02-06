@@ -3971,6 +3971,12 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
     BlockMap::iterator miSelf = m_block_index.find(hash);
     CBlockIndex *pindex = nullptr;
 
+    // ppcoin: Check for duplicate (from ProcessBlock in ppcoin)
+    if (m_block_index.count(hash))
+        return state.Invalid(error("AcceptBlockHeader() : already have block %d %s", m_block_index[hash]->nHeight, hash.ToString().c_str()));
+    if (mapOrphanBlocks.count(hash))
+        return state.Invalid(error("AcceptBlockHeader() : already have block (orphan) %s", hash.ToString().c_str()));
+
     if (hash != chainparams.GetConsensus().hashGenesisBlock) {
         if (miSelf != m_block_index.end()) {
             // Block header is already known.
@@ -4150,16 +4156,32 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     // ppcoin: check proof-of-stake
     if (pblock->IsProofOfStake())
     {
+        std::pair<COutPoint, unsigned int> proofOfStake = pblock->GetProofOfStake();
+
+        CBlockIndex* pindexBest = chainActive.Tip();
+
+        // note: disabled for now due to reliance on sync checkpoints
+        /*        
+        bool fDuplicateStakeOfBestBlock = false;
+        if (pindexBest->IsProofOfStake() && proofOfStake.first == pindexBest->prevoutStake)
+            // If the best block's stake is reused, we cancel the best block after the block checks
+            fDuplicateStakeOfBestBlock = true;
+        else
+        {
+            // Limited duplicity on stake: prevents block flood attack
+            // Duplicate stake allowed only when there is orphan child block
+            if (pblock->IsProofOfStake() && setStakeSeen.count(proofOfStake) && !mapOrphanBlocksByPrev.count(pblock->GetHash()) && !WantedByPendingSyncCheckpoint(hash))
+                return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", proofOfStake.first.ToString().c_str(), proofOfStake.second, hash.ToString().c_str());
+        }
+        */
+
         // ppcoin: record proof-of-stake hash value
         if (!mapProofOfStake.count(block.GetHash()))
             error("AddToBlockIndex() : hashProofOfStake not found in map");        
         pindex->SetProofOfStake();
         pindex->prevoutStake = block.vtx[1]->vin[0].prevout;
         pindex->nStakeTime = block.vtx[1]->nTime;
-
-        // note: ppcoin has "ProcessBlock() : block uses the same stake as the best block. Canceling the best block" here.
-        // this has not been added as yet as it is uncertain if this will cause a consensus based fork.
-
+    
         // Limited duplicity on stake: prevents block flood attack
         // Duplicate stake allowed only when there is orphan child block
         uint256 blockHash = pblock->GetHash();
