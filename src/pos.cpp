@@ -355,7 +355,6 @@ bool CheckStakeModifierCheckpoints(int nHeight, unsigned int nStakeModifierCheck
 //
 bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned int nTxPrevOffset, const CTransactionRef txPrev, const COutPoint& prevout, unsigned int nTimeTx, uint256& hashProofOfStake,  bool fPrintProofOfStake)
 {
-
     if (nTimeTx < txPrev->nTime)  // Transaction timestamp violation
         return error("CheckStakeKernelHash() : nTime violation");
 
@@ -371,7 +370,7 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     // this change increases active coins participating the hash and helps
     // to secure the network when proof-of-stake difficulty is low
     int64_t nTimeWeight = std::min((int64_t)nTimeTx - txPrev->nTime, (int64_t)Params().GetConsensus().nStakeMaxAge) - Params().GetConsensus().nStakeMinAge;
-    arith_uint512 bnCoinDayWeight = arith_uint512(nValueIn) * nTimeWeight / (COIN) / (24 * 60 * 60);
+    arith_uint512 bnCoinDayWeight = arith_uint512(nValueIn) * nTimeWeight / (COIN * 100) / (24 * 60 * 60);
 
     // We need to convert to uint512 to prevent overflow when multiplying by 1st block coins
     base_uint<512> targetProofOfStake512(bnTargetPerCoinDay.GetHex());
