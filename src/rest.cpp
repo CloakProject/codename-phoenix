@@ -507,6 +507,9 @@ static bool rest_getutxos(const util::Ref& context, HTTPRequest* req, const std:
             }
         } catch (const std::ios_base::failure&) {
             // abort in case of unreadable binary data
+            std::cout << "Caught an ios_base::failure.\n"
+                      << "Explanatory string: " << e.what() << '\n'
+                      << "Error code: " << e.code() << '\n';
             return RESTERR(req, HTTP_BAD_REQUEST, "Parse error");
         }
         break;

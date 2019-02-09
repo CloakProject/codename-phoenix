@@ -6,6 +6,11 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <stdlib.h>
+
+#ifndef _MSC_VER
+#include <unistd.h>
+#endif
 
 #include "leveldb/cache.h"
 #include "leveldb/comparator.h"

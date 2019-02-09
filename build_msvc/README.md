@@ -43,20 +43,11 @@ Building
 ---------------------
 The instructions below use `vcpkg` to install the dependencies.
 
-- Install [`vcpkg`](https://github.com/Microsoft/vcpkg).
-
-- Use Python to generate `*.vcxproj` from Makefile
-
-```
-PS >py -3 msvc-autogen.py
-```
-
-- An optional step is to adjust the settings in the `build_msvc` directory and the `common.init.vcxproj` file. This project file contains settings that are common to all projects such as the runtime library version and target Windows SDK version. The Qt directories can also be set.
-
-- To build from the command line with the Visual Studio 2017 toolchain use:
+- Clone `vcpkg` from the [github repository](https://github.com/Microsoft/vcpkg) and install as per the instructions in the main README.md.
+- Install the required packages (replace x64 with x86 as required):
 
 ```
-msbuild /m bitcoin.sln /p:Platform=x64 /p:Configuration=Release /p:PlatformToolset=v141 /t:build
+    PS >.\vcpkg install --triplet x64-windows-static boost-filesystem boost-signals2 boost-test libevent openssl zeromq berkeleydb secp256k1 leveldb
 ```
 
 - To build from the command line with the Visual Studio 2019 toolchain use:
@@ -65,15 +56,4 @@ msbuild /m bitcoin.sln /p:Platform=x64 /p:Configuration=Release /p:PlatformTools
 msbuild /m bitcoin.sln /p:Platform=x64 /p:Configuration=Release /t:build
 ```
 
-- Alternatively open the `build_msvc/bitcoin.sln` file in Visual Studio.
-
-AppVeyor
----------------------
-The .appveyor.yml in the root directory is suitable to perform builds on [AppVeyor](https://www.appveyor.com/) Continuous Integration servers. The simplest way to perform an AppVeyor build is to fork Bitcoin Core and then configure a new AppVeyor Project pointing to the forked repository.
-
-For safety reasons the Bitcoin Core .appveyor.yml file has the artifact options disabled. The build will be performed but no executable files will be available. To enable artifacts on a forked repository uncomment the lines shown below:
-
-```
-    #- 7z a bitcoin-%APPVEYOR_BUILD_VERSION%.zip %APPVEYOR_BUILD_FOLDER%\build_msvc\%platform%\%configuration%\*.exe
-    #- path: bitcoin-%APPVEYOR_BUILD_VERSION%.zip
-```
+- Build in Visual Studio.

@@ -4,6 +4,7 @@
 
 #include "db/db_iter.h"
 
+#include "db/filename.h"
 #include "db/db_impl.h"
 #include "db/dbformat.h"
 #include "db/filename.h"
@@ -13,6 +14,16 @@
 #include "util/logging.h"
 #include "util/mutexlock.h"
 #include "util/random.h"
+
+#ifdef _MSC_VER
+#if !defined(ssize_t)
+#ifdef _WIN64
+typedef int64_t ssize_t;
+#else
+typedef int32_t ssize_t;
+#endif
+#endif
+#endif
 
 namespace leveldb {
 
