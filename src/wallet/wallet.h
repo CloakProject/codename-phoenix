@@ -1074,6 +1074,8 @@ public:
 
     void GetScriptForMining(std::shared_ptr<CReserveScript> &script);
 
+    void SignBlock(CBlock* pblock, bool &result);
+
     unsigned int GetKeyPoolSize() EXCLUSIVE_LOCKS_REQUIRED(cs_wallet)
     {
         AssertLockHeld(cs_wallet); // set{Ex,In}ternalKeyPool

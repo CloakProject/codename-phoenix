@@ -3743,6 +3743,79 @@ void CWallet::GetScriptForMining(std::shared_ptr<CReserveScript> &script)
     script->reserveScript = CScript() << ToByteVector(pubkey) << OP_CHECKSIG;
 }
 
+typedef std::vector<unsigned char> valtype;
+
+// ppcoin: sign block
+void CWallet::SignBlock(CBlock* pblock, bool &result)
+{
+    std::vector<valtype> vSolutions;
+    txnouttype whichType;
+
+    result = false;
+
+    if (!pblock->IsProofOfStake())
+    {
+        for (unsigned int i = 0; i < pblock->vtx[0]->vout.size(); i++)
+        {
+            const CTxOut& txout = pblock->vtx[0]->vout[i];
+
+            if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+                continue;
+
+            if (whichType == TX_PUBKEY)
+            {
+                // Sign
+                valtype& vchPubKey = vSolutions[0];
+                CKey key;
+
+                if (!GetKey(CKeyID(Hash160(vchPubKey)), key))
+                    continue;
+                if (memcmp(key.GetPubKey().data(), vchPubKey.data(), vchPubKey.size()) != 0)
+                    continue;
+                if (!key.Sign(pblock->GetHash(), pblock->vchBlockSig))
+                    continue;
+
+                result = true;
+                return;
+            }
+        }
+    }
+    else
+    {
+        const CTxOut& txout = pblock->vtx[1]->vout[1];
+
+        if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+        {
+            result = false;
+            return;
+        }
+
+        if (whichType == TX_PUBKEY)
+        {
+            // Sign
+            valtype& vchPubKey = vSolutions[0];
+            CKey key;
+
+            if (!GetKey(CKeyID(Hash160(vchPubKey)), key))
+            {
+                result = false;
+                return;
+            }
+            if (memcmp(key.GetPubKey().data(), vchPubKey.data(), vchPubKey.size()) != 0)
+            {
+                result = false;
+                return;
+            }
+
+            result = key.Sign(pblock->GetHash(), pblock->vchBlockSig);
+            return;
+        }
+    }
+
+    printf("SignBlock failed\n");
+    return;
+}
+
 void CWallet::LockCoin(const COutPoint& output)
 {
     AssertLockHeld(cs_wallet); // setLockedCoins

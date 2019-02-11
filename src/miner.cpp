@@ -18,6 +18,7 @@
 #include <policy/feerate.h>
 #include <policy/policy.h>
 #include <pow.h>
+#include <pos.h>
 #include <primitives/transaction.h>
 #include <script/standard.h>
 #include <timedata.h>
@@ -28,6 +29,9 @@
 #include <algorithm>
 #include <queue>
 #include <utility>
+#include <key.h>
+#include <wallet/crypter.h>
+#include <wallet/wallet.h>
 
 // Unconfirmed transactions in the memory pool often depend on other
 // transactions in the memory pool. When we select transactions from the
@@ -45,10 +49,11 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
     if (nOldTime < nNewTime)
         pblock->nTime = nNewTime;
 
+    /*
     // Updating time can change work required on testnet:
     if (consensusParams.fPowAllowMinDifficultyBlocks)
         pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
-
+        */
     return nNewTime - nOldTime;
 }
 
@@ -96,9 +101,12 @@ void BlockAssembler::resetBlock()
     nFees = 0;
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fProofOfStake, bool fMineWitnessTx)
 {
     int64_t nTimeStart = GetTimeMicros();
+
+    // ppcoin: if coinstake available add coinstake tx
+    static int64_t nLastCoinStakeSearchTime = GetAdjustedTime();  // only initialized at startup
 
     resetBlock();
 
@@ -153,11 +161,12 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Create coinbase transaction.
     CMutableTransaction coinbaseTx;
+    coinbaseTx.nTime = GetAdjustedTime(); // ppcoin: set tx time
     coinbaseTx.vin.resize(1);
     coinbaseTx.vin[0].prevout.SetNull();
     coinbaseTx.vout.resize(1);
     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
-    coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+    coinbaseTx.vout[0].nValue = GetBlockSubsidy(nHeight, nFees, chainparams.GetConsensus());
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
     pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
@@ -167,15 +176,24 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     // Fill in header
     pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
-    UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
-    pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());
+
+    // ppcoin: set time
+    // todo: this PoS handler is present in legacy codebase but it looks like the lines below override the value - check!
+    if (pblock->IsProofOfStake())
+        pblock->nTime = pblock->vtx[1]->nTime; // same as coinstake timestamp
+
+    pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
+    pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - GetMaxClockDrift(pindexPrev->nHeight + 1));
+
+    if (pblock->IsProofOfWork())
+        UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);
+
+    //pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, fProofOfStake, chainparams.GetConsensus());
+    pblock->nBits = GetNextTargetRequired(pindexPrev, fProofOfStake);
     pblock->nNonce         = 0;
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(*pblock->vtx[0]);
-
+    
     CValidationState state;
-    if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {
-        throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
-    }
     int64_t nTime2 = GetTimeMicros();
 
     LogPrint(BCLog::BENCH, "CreateNewBlock() packages: %.2fms (%d packages, %d updated descendants), validity: %.2fms (total %.2fms)\n", 0.001 * (nTime1 - nTimeStart), nPackagesSelected, nDescendantsUpdated, 0.001 * (nTime2 - nTime1), 0.001 * (nTime2 - nTimeStart));
@@ -450,4 +468,49 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 
     pblock->vtx[0] = MakeTransactionRef(std::move(txCoinbase));
     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);
+}
+
+// proof of stake
+
+void SetStaking(bool mode) {
+    fStaking = mode;
+}
+
+bool GetStaking() {
+    return fStaking;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// Internal Staker
+//
+
+extern unsigned int nMinerSleep;
+
+void CloakStaker(const CChainParams& chainparams)
+{
+    LogPrintf("CloakStaker started\n");
+    SetThreadPriority(THREAD_PRIORITY_LOWEST);
+    RenameThread("cloak-staker");
+
+    std::shared_ptr<CReserveScript> coinbaseScript;
+    GetMainSignals().GetScriptForMining(coinbaseScript);
+
+    try
+    {
+        while (true)
+        {
+
+        }
+    }
+    catch (const boost::thread_interrupted&)
+    {
+        LogPrintf("CloakStaker terminated\n");
+        throw;
+    }
+    catch (const std::runtime_error &e)
+    {
+        LogPrintf("CloakStaker runtime error: %s\n", e.what());
+        return;
+    }
 }

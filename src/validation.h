@@ -46,6 +46,8 @@ struct ChainTxData;
 struct PrecomputedTransactionData;
 struct LockPoints;
 
+// note: double check these values for cloak!
+
 /** Default for -whitelistrelay. */
 static const bool DEFAULT_WHITELISTRELAY = true;
 /** Default for -whitelistforcerelay. */
@@ -135,6 +137,9 @@ static const bool DEFAULT_PEERBLOOMFILTERS = true;
 
 /** Default for -stopatheight */
 static const int DEFAULT_STOPATHEIGHT = 0;
+
+/** Default for -maxorphanblocks, maximum number of orphan blocks kept in memory */
+static const unsigned int DEFAULT_MAX_ORPHAN_BLOCKS = 750;
 
 struct BlockHasher
 {
@@ -273,7 +278,7 @@ bool GetTransaction(const uint256& hash, CTransactionRef& tx, const Consensus::P
  * validationinterface callback.
  */
 bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock = std::shared_ptr<const CBlock>());
-CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams);
+CAmount GetBlockSubsidy(int nHeight, CAmount fees, const Consensus::Params& consensusParams);
 
 /** Guess verification progress (as a fraction between 0.0=genesis and 1.0=current tip). */
 double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex* pindex);
@@ -404,7 +409,7 @@ bool CheckBlockSignature(const CBlock& block, const Consensus::Params& consensus
 int64_t GetProofOfStakeReward(int nHeight, int64_t nCoinAge, int64_t nFees, CBlockIndex* pindexPrev);
 
 /** Check a block is completely valid from start to finish (only works on top of our current best block) */
-bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW = true, bool fCheckMerkleRoot = true) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams, const CBlock& block, CBlockIndex* pindexPrev, bool fCheckPOW = true, bool fCheckMerkleRoot = true, bool fCheckSig = true) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
 /** Check whether witness commitments are required for block. */
 bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params);
@@ -503,5 +508,9 @@ inline bool IsBlockPruned(const CBlockIndex* pblockindex)
 {
     return (fHavePruned && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0);
 }
+
+unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake);
+
+void PruneOrphanBlocks();
 
 #endif // BITCOIN_VALIDATION_H

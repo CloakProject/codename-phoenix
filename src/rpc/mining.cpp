@@ -118,7 +118,7 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd && !ShutdownRequested())
     {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, false));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
@@ -136,6 +136,18 @@ UniValue generateBlocks(std::shared_ptr<CReserveScript> coinbaseScript, int nGen
         if (pblock->nNonce == nInnerLoopCount) {
             continue;
         }
+
+        // cloak - sign the block
+        bool signedOk = false;
+        GetMainSignals().SignBlock(pblock, signedOk);
+
+        // cloak: test block validity outside of CreateNewBlock so that mroot is set and block is signed
+        CValidationState state;
+        CBlockIndex* pindexPrev = chainActive.Tip();
+        if (!TestBlockValidity(state, Params(), *pblock, pindexPrev, true, true, true)) {
+            throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
+        }
+
         std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
         if (!ProcessNewBlock(Params(), shared_pblock, true, shared_pblock->IsProofOfStake(), nullptr))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
@@ -517,7 +529,7 @@ static UniValue getblocktemplate(const JSONRPCRequest& request)
 
         // Create new block
         CScript scriptDummy = CScript() << OP_TRUE;
-        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptDummy, fSupportsSegwit);
+        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptDummy, false, fSupportsSegwit);
         if (!pblocktemplate)
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
 

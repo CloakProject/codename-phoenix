@@ -367,6 +367,7 @@ void SetupServerArgs()
     gArgs.AddArg("-datadir=<dir>", "Specify data directory", false, OptionsCategory::OPTIONS);
     gArgs.AddArg("-dbbatchsize", strprintf("Maximum database write batch size in bytes (default: %u)", nDefaultDbBatchSize), true, OptionsCategory::OPTIONS);
     gArgs.AddArg("-dbcache=<n>", strprintf("Set database cache size in megabytes (%d to %d, default: %d)", nMinDbCache, nMaxDbCache, nDefaultDbCache), false, OptionsCategory::OPTIONS);
+    gArgs.AddArg("-maxorphanblocks=<n>", strprintf("Keep at most <n> unconnectable blocks in memory (default: %d)", DEFAULT_MAX_ORPHAN_BLOCKS), false, OptionsCategory::OPTIONS);
     gArgs.AddArg("-debuglogfile=<file>", strprintf("Specify location of debug log file. Relative paths will be prefixed by a net-specific datadir location. (-nodebuglogfile to disable; default: %s)", DEFAULT_DEBUGLOGFILE), false, OptionsCategory::OPTIONS);
     gArgs.AddArg("-feefilter", strprintf("Tell other nodes to filter invs to us by our mempool min fee (default: %u)", DEFAULT_FEEFILTER), true, OptionsCategory::OPTIONS);
     gArgs.AddArg("-includeconf=<file>", "Specify additional configuration file, relative to the -datadir path (only useable from configuration file, not command line)", false, OptionsCategory::OPTIONS);
@@ -1764,6 +1765,12 @@ bool AppInitMain()
     uiInterface.InitMessage(_("Done loading"));
 
     g_wallet_init_interface.Start(scheduler);
+
+#if ENABLE_WALLET
+    // Generate coins in the background
+    SetStaking(gArgs.GetBoolArg("-staking", true));
+    threadGroup.create_thread(boost::bind(&CloakStaker, boost::cref(chainparams)));
+#endif
 
     return true;
 }

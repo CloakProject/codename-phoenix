@@ -14,6 +14,13 @@
 #include <memory>
 #include <vector>
 
+// MODIFIER_INTERVAL: time to elapse before new modifier is computed
+static const unsigned int MODIFIER_INTERVAL = 5 * 60; // * 60; // 20 minutes
+
+// MODIFIER_INTERVAL_RATIO:
+// ratio of group interval length between the last group and the first group
+static const int MODIFIER_INTERVAL_RATIO = 3;
+
 struct SeedSpec6 {
     uint8_t addr[16];
     uint16_t port;

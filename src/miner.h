@@ -18,10 +18,12 @@
 class CBlockIndex;
 class CChainParams;
 class CScript;
+class CCryptoKeyStore;
 
 namespace Consensus { struct Params; };
 
 static const bool DEFAULT_PRINTPRIORITY = false;
+static bool fStaking;
 
 struct CBlockTemplate
 {
@@ -157,7 +159,7 @@ public:
     BlockAssembler(const CChainParams& params, const Options& options);
 
     /** Construct a new block template with coinbase to scriptPubKeyIn */
-    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fMineWitnessTx=true);
+    std::unique_ptr<CBlockTemplate> CreateNewBlock(const CScript& scriptPubKeyIn, bool fProofOfStake, bool fMineWitnessTx=true);
 
 private:
     // utility functions
@@ -196,5 +198,15 @@ private:
 /** Modify the extranonce in a block */
 void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce);
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
+
+// proof of stake
+void CloakStaker(const CChainParams& chainparams);
+void SetStaking(bool mode);
+bool GetStaking();
+
+#ifdef ENABLE_WALLET
+// ppcoin: sign block
+bool SignBlock(CBlock *pblock, const CCryptoKeyStore& keystore);
+#endif
 
 #endif // BITCOIN_MINER_H
