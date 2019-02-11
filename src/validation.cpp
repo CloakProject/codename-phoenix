@@ -193,6 +193,9 @@ public:
 
     void UnloadBlockIndex();
 
+    // Remove a random orphan block (which does not have any dependent orphans).
+    void PruneOrphanBlocks();
+
 private:
     bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace);
     bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions &disconnectpool);
@@ -209,9 +212,7 @@ private:
 
     void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state);
     CBlockIndex* FindMostWorkChain() EXCLUSIVE_LOCKS_REQUIRED(cs_main);
-    void ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pindexNew, const CDiskBlockPos& pos, const Consensus::Params& consensusParams) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
-
-
+    void ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pindexNew, const CDiskBlockPos& pos, const Consensus::Params& consensusParams) EXCLUSIVE_LOCKS_REQUIRED(cs_main);    
     bool RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 } g_chainstate;
 
@@ -1172,26 +1173,14 @@ bool ReadRawBlockFromDisk(std::vector<uint8_t>& block, const CBlockIndex* pindex
     return ReadRawBlockFromDisk(block, block_pos, message_start);
 }
 
-CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams)
+CAmount GetBlockSubsidy(int nHeight, CAmount fees, const Consensus::Params& consensusParams)
 {
     int64_t nSubsidy = 496 * COIN;
 
     if (nHeight <= 50)
         nSubsidy = 1 * COIN; // first 50 blocks are 1 coin reward
 
-    return nSubsidy;
-
-    /*
-    int halvings = nHeight / consensusParams.nSubsidyHalvingInterval;
-    // Force block reward to zero when right shift is undefined.
-    if (halvings >= 64)
-        return 0;
-
-    CAmount nSubsidy = 50 * COIN;
-    // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
-    nSubsidy >>= halvings;
-    return nSubsidy;
-    */
+    return nSubsidy + fees;
 }
 
 bool IsInitialBlockDownload()
@@ -1831,6 +1820,11 @@ unsigned int ComputedMinStake(unsigned int nBase, int64_t nTime, unsigned int nB
     return ComputeMaxBits(Params().ProofOfStakeLimit(), nBase, nTime);
 }
 
+void PruneOrphanBlocks()
+{
+    g_chainstate.PruneOrphanBlocks();
+}
+
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
     // Proof-of-Stake blocks has own target limit since nVersion=3 supermajority on mainNet and always on testNet
@@ -1883,8 +1877,6 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
     return bnNew.GetCompact();
 }
 
-
-
 static int64_t nTimeCheck = 0;
 static int64_t nTimeForks = 0;
 static int64_t nTimeVerify = 0;
@@ -1909,7 +1901,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nStakeReward = 0;
     
     if (pindex->IsProofOfWork() && pindex->nHeight > CUTOFF_POW_BLOCK)
-        return state.DoS(100, error("AcceptBlock() : No proof-of-work allowed anymore (height = %d)", pindex->nHeight));
+        return state.DoS(100, error("ConnectBlock() : No proof-of-work allowed anymore (height = %d)", pindex->nHeight));
 
     // Check proof of stake
     uint32_t nextWork = GetNextTargetRequired(pindex->pprev, block.IsProofOfStake());
@@ -2165,7 +2157,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint(BCLog::BENCH, "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
 
-    CAmount blockReward = GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
+    CAmount blockReward = GetBlockSubsidy(pindex->nHeight, nFees, chainparams.GetConsensus());
     if (block.vtx[0]->GetValueOut() > blockReward)
         return state.DoS(100,
                          error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
@@ -2971,7 +2963,6 @@ bool CChainState::InvalidateBlock(CValidationState& state, const CChainParams& c
         }
         it++;
     }
-
     InvalidChainFound(pindex);
 
     // Only notify about a new block tip if the active chain was modified.
@@ -3250,12 +3241,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 
     if (block.IsProofOfStake())
     {
-	// Second transaction must be coinstake, the rest must not be
-	if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
-		return state.DoS(100, error("CheckBlock() : second tx is not coinstake"));
-	for (unsigned int i = 2; i < block.vtx.size(); i++)
-		if (block.vtx[i]->IsCoinStake())
-			return state.DoS(100, error("CheckBlock() : more than one coinstake"));
+	    // Second transaction must be coinstake, the rest must not be
+	    if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
+		    return state.DoS(100, error("CheckBlock() : second tx is not coinstake"));
+	    for (unsigned int i = 2; i < block.vtx.size(); i++)
+		    if (block.vtx[i]->IsCoinStake())
+			    return state.DoS(100, error("CheckBlock() : more than one coinstake"));
     }
 
     // All potential-corruption validation must be done before we do any
@@ -3471,7 +3462,7 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationSta
     // Check timestamp against prev
     if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
         return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");
-
+       
     // Check timestamp
     if (block.GetBlockTime() > nAdjustedTime + MAX_FUTURE_BLOCK_TIME)
         return state.Invalid(false, REJECT_INVALID, "time-too-new", "block timestamp too far in the future");
@@ -3583,6 +3574,12 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState&
     CBlockIndex *pindex = nullptr;
 
     BlockMap::iterator miEnd = mapBlockIndex.end();
+
+    // ppcoin: Check for duplicate (from ProcessBlock in ppcoin)
+    if (mapBlockIndex.count(hash))
+        return state.Invalid(error("AcceptBlockHeader() : already have block %d %s", mapBlockIndex[hash]->nHeight, hash.ToString().c_str()));
+    if (mapOrphanBlocks.count(hash))
+        return state.Invalid(error("AcceptBlockHeader() : already have block (orphan) %s", hash.ToString().c_str()));
 
     if (hash != chainparams.GetConsensus().hashGenesisBlock) {
         if (miSelf != miEnd) {
@@ -3710,6 +3707,10 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     // not process unrequested blocks.
     bool fTooFarAhead = (pindex->nHeight > int(chainActive.Height() + MIN_BLOCKS_TO_KEEP));
 
+    // ppcoin: check coinbase timestamp isn't too early
+    if (pblock->GetBlockTime() > (int64_t)pblock->vtx[0]->nTime + GetMaxClockDrift(pindex->nHeight))
+        return state.DoS(50, false, REJECT_INVALID, "block-cbtx-early", false, "coinbase timestamp is too early");
+
     // TODO: Decouple this function from the block download logic by removing fRequested
     // This requires some new chain data structure to efficiently look up if a
     // block is in a chain leading to a candidate for best tip, despite not
@@ -3733,13 +3734,32 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CVali
     // ppcoin: check proof-of-stake
     if (pblock->IsProofOfStake())
     {
+        std::pair<COutPoint, unsigned int> proofOfStake = pblock->GetProofOfStake();
+
+        CBlockIndex* pindexBest = chainActive.Tip();
+
+        // note: disabled for now due to reliance on sync checkpoints
+        /*        
+        bool fDuplicateStakeOfBestBlock = false;
+        if (pindexBest->IsProofOfStake() && proofOfStake.first == pindexBest->prevoutStake)
+            // If the best block's stake is reused, we cancel the best block after the block checks
+            fDuplicateStakeOfBestBlock = true;
+        else
+        {
+            // Limited duplicity on stake: prevents block flood attack
+            // Duplicate stake allowed only when there is orphan child block
+            if (pblock->IsProofOfStake() && setStakeSeen.count(proofOfStake) && !mapOrphanBlocksByPrev.count(pblock->GetHash()) && !WantedByPendingSyncCheckpoint(hash))
+                return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", proofOfStake.first.ToString().c_str(), proofOfStake.second, hash.ToString().c_str());
+        }
+        */
+
         // ppcoin: record proof-of-stake hash value
         if (!mapProofOfStake.count(block.GetHash()))
             error("AddToBlockIndex() : hashProofOfStake not found in map");        
         pindex->SetProofOfStake();
         pindex->prevoutStake = block.vtx[1]->vin[0].prevout;
         pindex->nStakeTime = block.vtx[1]->nTime;
-
+    
         // Limited duplicity on stake: prevents block flood attack
         // Duplicate stake allowed only when there is orphan child block
         uint256 blockHash = pblock->GetHash();
@@ -4322,6 +4342,30 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     LogPrintf("No coin database inconsistencies in last %i blocks (%i transactions)\n", block_count, nGoodTransactions);
 
     return true;
+}
+
+void CChainState::PruneOrphanBlocks()
+{
+    if (mapOrphanBlocksByPrev.size() <= (size_t)std::max((int64_t)0, gArgs.GetArg("-maxorphanblocks", DEFAULT_MAX_ORPHAN_BLOCKS)))
+        return;
+
+    // Pick a random orphan block.
+    int pos = GetRandInt(mapOrphanBlocksByPrev.size() - 1);
+    BlockMap::iterator it = mapOrphanBlocksByPrev.begin();
+    while (pos--) it++;
+
+    // As long as this block has other orphans depending on it, move to one of those successors.
+    do {
+        BlockMap::iterator it2 = mapOrphanBlocksByPrev.find(it->second->GetBlockHash());
+        if (it2 == mapOrphanBlocksByPrev.end())
+            break;
+        it = it2;
+    } while (1);
+
+    uint256 hash = it->second->GetBlockHash();
+    delete it->second;
+    mapOrphanBlocksByPrev.erase(it);
+    mapOrphanBlocks.erase(hash);
 }
 
 /** Apply the effects of a block on the utxo cache, ignoring that it may already have been applied. */

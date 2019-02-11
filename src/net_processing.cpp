@@ -2320,7 +2320,6 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                     // anyone relaying LegitTxX banned)
                     CValidationState stateDummy;
 
-
                     if (setMisbehaving.count(fromPeer))
                         continue;
                     if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, &fMissingInputs2, &lRemovedTxn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {
@@ -2786,6 +2785,9 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             mapBlockSource.emplace(hash, std::make_pair(pfrom->GetId(), true));
         }
         bool fNewBlock = false;
+
+        // ppcoin: prune excessive orphan blocks
+        PruneOrphanBlocks();
 
         // ppcoin: verify hash target and signature of coinstake tx
         if (pblock->IsProofOfStake())
