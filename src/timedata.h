@@ -75,4 +75,6 @@ int64_t GetTimeOffset();
 int64_t GetAdjustedTime();
 void AddTimeData(const CNetAddr& ip, int64_t nTime);
 
+int64_t abs64(int64_t n);
+
 #endif // BITCOIN_TIMEDATA_H

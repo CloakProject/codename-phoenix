@@ -233,6 +233,7 @@ public:
 
         /* disable fallback fee on mainnet */
         m_fallback_fee_enabled = false;
+        fMiningRequiresPeers = true;
     }
 };
 
@@ -336,6 +337,7 @@ public:
 
         /* enable fallback fee on testnet */
         m_fallback_fee_enabled = true;
+        fMiningRequiresPeers = true;
     }
 };
 
@@ -416,6 +418,7 @@ public:
 
         /* enable fallback fee on regtest */
         m_fallback_fee_enabled = true;
+        fMiningRequiresPeers = false;
     }
 };
 

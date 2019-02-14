@@ -1074,6 +1074,8 @@ public:
 
     void GetScriptForMining(std::shared_ptr<CReserveScript> &script);
 
+	void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result);
+
     void SignBlock(CBlock* pblock, bool &result);
 
     unsigned int GetKeyPoolSize() EXCLUSIVE_LOCKS_REQUIRED(cs_wallet)

@@ -3745,6 +3745,11 @@ void CWallet::GetScriptForMining(std::shared_ptr<CReserveScript> &script)
 
 typedef std::vector<unsigned char> valtype;
 
+void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result)
+{
+
+}
+
 // ppcoin: sign block
 void CWallet::SignBlock(CBlock* pblock, bool &result)
 {
