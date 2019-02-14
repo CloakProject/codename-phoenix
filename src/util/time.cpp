@@ -15,6 +15,7 @@
 #include <thread>
 
 #include <tinyformat.h>
+#include <chrono>
 
 void UninterruptibleSleep(const std::chrono::microseconds& n) { std::this_thread::sleep_for(n); }
 
@@ -43,6 +44,14 @@ T GetTime()
 template std::chrono::seconds GetTime();
 template std::chrono::milliseconds GetTime();
 template std::chrono::microseconds GetTime();
+
+int64_t GetSteadyTime()
+{
+    auto now = std::chrono::steady_clock::now();
+    auto millisecs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+    assert(millisecs.count() > 0);
+    return millisecs.count();
+}
 
 void SetMockTime(int64_t nMockTimeIn)
 {

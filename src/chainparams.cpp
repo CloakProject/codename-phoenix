@@ -225,6 +225,10 @@ public:
             /* nTxCount */ 582083445,
             /* dTxRate  */ 3.508976121410527,
         };
+
+        /* disable fallback fee on mainnet */
+        m_fallback_fee_enabled = false;
+        fMiningRequiresPeers = true;
     }
 };
 
@@ -436,6 +440,10 @@ public:
         fRequireStandard = true;
         m_is_test_chain = true;
         m_is_mockable_chain = false;
+
+        /* enable fallback fee on testnet */
+        m_fallback_fee_enabled = true;
+        fMiningRequiresPeers = true;
     }
 };
 
@@ -522,6 +530,10 @@ public:
     {
         consensus.vDeployments[d].nStartTime = nStartTime;
         consensus.vDeployments[d].nTimeout = nTimeout;
+        
+        /* enable fallback fee on regtest */
+        m_fallback_fee_enabled = true;
+        fMiningRequiresPeers = false;
     }
     void UpdateActivationParametersFromArgs(const ArgsManager& args);
 };

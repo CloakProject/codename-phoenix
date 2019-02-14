@@ -203,9 +203,13 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
 /** Update an old GenerateCoinbaseCommitment from CreateNewBlock after the block txs have changed */
 void RegenerateCommitments(CBlock& block);
 // proof of stake
-void CloakStaker(const CChainParams& chainparams);
-void SetStaking(bool mode);
-bool GetStaking();
+class Staker {
+public:
+	void static CloakStaker(const CChainParams& chainparams);
+	void static SetStaking(bool mode);
+	bool static GetStaking();
+private:
+};
 
 #ifdef ENABLE_WALLET
 // ppcoin: sign block

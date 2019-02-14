@@ -1079,6 +1079,8 @@ public:
     bool SignBlock(std::shared_ptr<CBlock>& pblock);
 =======
 
+	void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result);
+
     void SignBlock(CBlock* pblock, bool &result);
 >>>>>>> f369b0238 (Some PoW mining pipeline reworking/refactoring.)
 

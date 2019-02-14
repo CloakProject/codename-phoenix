@@ -277,6 +277,8 @@ public:
     // Default transaction version.
     static const int32_t CURRENT_VERSION = 1;
 
+	// todo: cloak - double check MAX_STANDARD_VERSION is correct!
+
     // Changing the default transaction version requires a two step process: first
     // adapting relay policy by bumping MAX_STANDARD_VERSION, and then later date
     // bumping the default CURRENT_VERSION at which point both CURRENT_VERSION and
@@ -392,7 +394,6 @@ struct CMutableTransaction {
     {
         SerializeTransaction(*this, s);
     }
-
 
     template <typename Stream>
     inline void Unserialize(Stream& s)

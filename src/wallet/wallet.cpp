@@ -3566,6 +3566,11 @@ void ReserveDestination::ReturnDestination()
 
 typedef std::vector<unsigned char> valtype;
 
+void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result)
+{
+
+}
+
 // ppcoin: sign block
 void CWallet::SignBlock(CBlock* pblock, bool &result)
 {

@@ -11,6 +11,11 @@
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <scheduler.h>
+#include <sync.h>
+#include <txmempool.h>
+#include <util.h>
+#include <validation.h>
+#include <keystore.h>
 
 #include <future>
 #include <unordered_map>
@@ -259,7 +264,10 @@ void CMainSignals::GetScriptForMining(std::shared_ptr<CReserveScript>& script) {
     m_internals->GetScriptForMining(script);
 }
 
-void CMainSignals::SignBlock(CBlock* pblock, bool &result)
-{
+void CMainSignals::SignBlock(CBlock* pblock, bool &result){
     m_internals->SignBlock(pblock, result);
+}
+
+void CMainSignals::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result){
+    m_internals->CreateCoinStake(nBits, nSearchInterval, txNew, result);
 }

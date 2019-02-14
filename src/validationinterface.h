@@ -176,6 +176,7 @@ protected:
 
     virtual void GetScriptForMining(std::shared_ptr<CReserveScript>&) {}
     virtual void SignBlock(CBlock*, bool &result) {}
+	virtual void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result) {}
     
     friend void ::RegisterValidationInterface(CValidationInterface*);
     friend void ::UnregisterValidationInterface(CValidationInterface*);
@@ -215,6 +216,7 @@ public:
     void BlockChecked(const CBlock&, const BlockValidationState&);
     void GetScriptForMining(std::shared_ptr<CReserveScript>&);
     void SignBlock(CBlock* pblock, bool &result);
+	void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result);
     void NewPoWValidBlock(const CBlockIndex *, const std::shared_ptr<const CBlock>&);
 };
 
