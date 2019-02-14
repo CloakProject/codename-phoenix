@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <boost/test/unit_test.hpp>
+// cloak : disabled for now [rzr]
 /*
 [[noreturn]] void Shutdown(void* parg)
 {
