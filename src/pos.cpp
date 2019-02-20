@@ -481,15 +481,14 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
     CBlock blockPrev;
     CDiskBlockPos blockPos = pblockindex->GetBlockPos();
 
-    if (ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()) == false)
+    if (!ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()))
         return error("CheckProofOfStake() : read block failed");
 
     int prevTxOffsetInBlock = blockPos.nPos + GetSerializeSize(CBlock(), SER_DISK, CLIENT_VERSION) - (2 * GetSizeOfCompactSize(0)) + GetSizeOfCompactSize(blockPrev.vtx.size());
-    for(int i=0; i< blockPrev.vtx.size(); i++)
-    {
-        if (blockPrev.vtx[i]->GetHash() == txPrev->GetHash())
+    for (auto& i : blockPrev.vtx) {
+        if (i->GetHash() == txPrev->GetHash())
             break;
-        prevTxOffsetInBlock += GetSerializeSize(blockPrev.vtx[i], SER_DISK, CLIENT_VERSION);
+        prevTxOffsetInBlock += GetSerializeSize(i, SER_DISK, CLIENT_VERSION);
     }
 
     if (!CheckStakeKernelHash(nBits, pblockindex, prevTxOffsetInBlock - blockPos.nPos, txPrev, txin.prevout, tx->nTime, hashProofOfStake))

@@ -205,7 +205,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
         if (nSearchTime > nLastCoinStakeSearchTime)
         {
             bool gotCoinStake = false;
-            GetMainSignals().CreateCoinStake(pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, MakeTransactionRef(txCoinStake), gotCoinStake);
+            GetMainSignals().CreateCoinStake(pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, &txCoinStake, gotCoinStake);
             if (gotCoinStake)
             {
                 if (txCoinStake.nTime >= std::max(pindexPrev->GetMedianTimePast() + 1, pindexPrev->GetBlockTime() - GetMaxClockDrift(pindexPrev->nHeight + 1)))
