@@ -338,7 +338,7 @@ public:
     char fFromMe;
     std::string strFromAccount;
     int64_t nOrderPos; //!< position in ordered transaction list
-    std::multimap<int64_t, std::pair<CWalletTx*, CAccountingEntry*>>::const_iterator m_it_wtxOrdered;
+    std::multimap<int64_t, std::pair<CWalletTx*, CAccountingEntry*>>::const_iterator m_it_wtxOrdered;	std::vector<char> vfEnigmaReserved; // which outputs are reserved for Enigma usage
 
     // memory only
     mutable bool fDebitCached;
@@ -350,6 +350,7 @@ public:
     mutable bool fImmatureWatchCreditCached;
     mutable bool fAvailableWatchCreditCached;
     mutable bool fChangeCached;
+    mutable bool fEnigmaReservedCached;
     mutable bool fInMempool;
     mutable CAmount nDebitCached;
     mutable CAmount nCreditCached;
@@ -360,6 +361,7 @@ public:
     mutable CAmount nImmatureWatchCreditCached;
     mutable CAmount nAvailableWatchCreditCached;
     mutable CAmount nChangeCached;
+    mutable CAmount nEnigmaReservedCached;
 
     CWalletTx(const CWallet* pwalletIn, CTransactionRef arg) : CMerkleTx(std::move(arg))
     {
@@ -490,6 +492,15 @@ public:
 
     /** Pass this transaction to the mempool. Fails if absolute fee exceeds absurd fee. */
     bool AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state);
+    
+    bool IsEnigmaReserved(unsigned int nOut) const
+    {
+        if (nOut >= this->tx->vout.size())
+			throw std::runtime_error("CWalletTx::IsEnigmaReserved() : nOut out of range");
+        if (nOut >= vfEnigmaReserved.size())
+			return false;
+        return (!!vfEnigmaReserved[nOut]);
+    }
 
     std::set<uint256> GetConflicts() const;
 };

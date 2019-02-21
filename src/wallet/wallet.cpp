@@ -3956,12 +3956,12 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
             if (entry.tx->tx->nTime + Params().GetConsensus().nStakeMaxAge > mtx.nTime)
                 continue;
             // Do not add coins that are reserved for Enigma
-            if (pcoin.first->IsEnigmaReserved(pcoin.second))
+            if (entry.tx->IsEnigmaReserved(entry.GetInputCoin().outpoint.n))
                 continue;
 
-            mtx.vin.push_back(CTxIn(pcoin.first->GetHash(), pcoin.second));
-            nCredit += pcoin.first->vout[pcoin.second].nValue;
-            vwtxPrev.push_back(pcoin.first);
+            mtx.vin.push_back(CTxIn(entry.GetInputCoin().outpoint.hash, entry.GetInputCoin().outpoint.n));
+            nCredit += entry.GetInputCoin().txout.nValue;
+            vwtxPrev.push_back(entry);
         }
     }
 
@@ -4709,7 +4709,6 @@ int CMerkleTx::GetBlocksToMaturity() const
     assert(chain_depth >= 0); // coinbase tx should not be conflicted
     return std::max(0, (COINBASE_MATURITY+1) - chain_depth);
 }
-
 
 bool CWalletTx::AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state)
 {
