@@ -2418,7 +2418,7 @@ const CTxOut& CWallet::FindNonChangeParentOutput(const CTransaction& tx, int out
 }
 
 bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, const CoinEligibilityFilter& eligibility_filter, std::vector<OutputGroup> groups,
-                                 std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const
+                                 std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const
 {
     setCoinsRet.clear();
     nValueRet = 0;
@@ -2471,7 +2471,7 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, const CoinEligibil
     }
 }
 
-bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const
+bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const
 {
     std::vector<COutput> vCoins(vAvailableCoins);
 
@@ -2486,7 +2486,8 @@ bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAm
             if (!out.fSpendable)
                  continue;
             nValueRet += out.tx->tx->vout[out.i].nValue;
-            setCoinsRet.insert(out.GetInputCoin());
+            //setCoinsRet.insert(out.GetInputCoin());
+            setCoinsRet.insert(out);
         }
         return (nValueRet >= nTargetValue);
     }
@@ -2724,7 +2725,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CTransac
     CAmount nFeeNeeded;
     int nBytes;
     {
-        std::set<CInputCoin> setCoins;
+        std::set<COutput> setCoins;
         LOCK2(cs_main, cs_wallet);
         {
             std::vector<COutput> vAvailableCoins;
@@ -2896,7 +2897,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CTransac
                 // Dummy fill vin for maximum size estimation
                 //
                 for (const auto& coin : setCoins) {
-                    txNew.vin.push_back(CTxIn(coin.outpoint,CScript()));
+                    txNew.vin.push_back(CTxIn(coin.GetInputCoin().outpoint,CScript()));
                 }
 
                 nBytes = CalculateMaximumSignedTxSize(txNew, this, coin_control.fAllowWatchOnly);
@@ -3790,8 +3791,8 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
         */
 
     //std::set<std::pair<const CWalletTx*, unsigned int> > setCoins;
-    std::set<CInputCoin> setCoins;
-    std::vector<const CInputCoin> vwtxPrev;
+    std::set<COutput> setCoins;
+    std::vector<const COutput> vwtxPrev;
     int64_t nValueIn = 0;
     //if (!SelectCoins(nBalance - nReserveBalance, txNew.nTime, setCoins, nValueIn))
 
@@ -3816,7 +3817,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
     for (const auto& entry : setCoins)
     {
-        uint256 hashPrevTx = entry.outpoint.hash;
+        uint256 hashPrevTx = entry.GetInputCoin().outpoint.hash;
         uint256 hashPrevBlock;
         CTransactionRef txPrev;
 
@@ -3870,7 +3871,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
                 std::vector<valtype> vSolutions;
                 txnouttype whichType;
                 CScript scriptPubKeyOut;
-                scriptPubKeyKernel = entry.txout.scriptPubKey;
+                scriptPubKeyKernel = entry.GetInputCoin().txout.scriptPubKey;
                 if (!Solver(scriptPubKeyKernel, whichType, vSolutions))
                 {
                     if (gArgs.GetBoolArg("-printcoinstake", false))
@@ -3905,7 +3906,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
                 mtx.nTime -= n;
                 mtx.vin.push_back(CTxIn(hashPrevTx, prevTxOffsetIndex));
-                nCredit += entry.txout.nValue;
+                nCredit += entry.GetInputCoin().txout.nValue;
 
                 // printf(">> Wallet: CreateCoinStake: nCredit = %"PRI64d"\n", nCredit);
 
@@ -3932,12 +3933,12 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
     for (const auto& entry : setCoins)
     {
-        uint256 hashPrevTx = entry.outpoint.hash;
+        uint256 hashPrevTx = entry.GetInputCoin().outpoint.hash;
 
         // Attempt to add more inputs
         // Only add coins of the same key/address as kernel
-        if (mtx.vout.size() == 2 && ((entry.txout.scriptPubKey == scriptPubKeyKernel || entry.txout.scriptPubKey == mtx.vout[1].scriptPubKey))
-            && entry.outpoint.hash != mtx.vin[0].prevout.hash)
+        if (mtx.vout.size() == 2 && ((entry.GetInputCoin().txout.scriptPubKey == scriptPubKeyKernel || entry.GetInputCoin().txout.scriptPubKey == mtx.vout[1].scriptPubKey))
+            && entry.GetInputCoin().outpoint.hash != mtx.vin[0].prevout.hash)
         {
             // Stop adding more inputs if already too many inputs
             if (mtx.vin.size() >= 100)
@@ -3946,13 +3947,13 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
             if (nCredit > nCombineThreshold)
                 break;
             // Stop adding inputs if reached reserve limit
-            if (nCredit + entry.txout.nValue > nBalance - nReserveBalance)
+            if (nCredit + entry.GetInputCoin().txout.nValue > nBalance - nReserveBalance)
                 break;
             // Do not add additional significant input
-            if (entry.txout.nValue > nCombineThreshold)
+            if (entry.GetInputCoin().txout.nValue > nCombineThreshold)
                 continue;
             // Do not add input that is still too young
-            if (pcoin.first->nTime + nStakeMaxAge > mtx.nTime)
+            if (entry.tx->tx->nTime + Params().GetConsensus().nStakeMaxAge > mtx.nTime)
                 continue;
             // Do not add coins that are reserved for Enigma
             if (pcoin.first->IsEnigmaReserved(pcoin.second))
