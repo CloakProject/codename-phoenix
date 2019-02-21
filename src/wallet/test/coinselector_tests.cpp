@@ -50,7 +50,12 @@ static void add_coin(const CAmount& nValue, int nInput, CoinSet& set)
     CMutableTransaction tx;
     tx.vout.resize(nInput + 1);
     tx.vout[nInput].nValue = nValue;
-    set.emplace(MakeTransactionRef(tx), nInput);
+
+    std::unique_ptr<CWalletTx> wtx(new CWalletTx(&testWallet, MakeTransactionRef(std::move(tx))));
+
+    //COutput output(wtx.get(), nInput, 6 * 24, true /* spendable */, true /* solvable */, true /* safe */);
+
+    set.emplace(wtx.get(), nInput, 6 * 24, true /* spendable */, true /* solvable */, true /* safe */);
 }
 
 static void add_coin(CWallet& wallet, const CAmount& nValue, int nAge = 6*24, bool fIsFromMe = false, int nInput=0, bool spendable = false)

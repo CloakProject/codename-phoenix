@@ -325,6 +325,7 @@ public:
     bool fFromMe;
     int64_t nOrderPos; //!< position in ordered transaction list
     std::multimap<int64_t, CWalletTx*>::const_iterator m_it_wtxOrdered;
+    std::vector<char> vfEnigmaReserved; // which outputs are reserved for Enigma usage
 
     // memory only
     enum AmountType { DEBIT, CREDIT, IMMATURE_CREDIT, AVAILABLE_CREDIT, AMOUNTTYPE_ENUM_ELEMENTS };
@@ -338,8 +339,10 @@ public:
      */
     mutable bool m_is_cache_empty{true};
     mutable bool fChangeCached;
+    mutable bool fEnigmaReservedCached;
     mutable bool fInMempool;
     mutable CAmount nChangeCached;
+    mutable CAmount nEnigmaReservedCached;
 
     CWalletTx(const CWallet* wallet, CTransactionRef arg)
         : pwallet(wallet),
@@ -510,6 +513,17 @@ public:
     // that we still have the runtime check "AssertLockHeld(pwallet->cs_wallet)"
     // in place.
     std::set<uint256> GetConflicts() const NO_THREAD_SAFETY_ANALYSIS;
+    /** Pass this transaction to the mempool. Fails if absolute fee exceeds absurd fee. */
+    bool AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state);
+    
+    bool IsEnigmaReserved(unsigned int nOut) const
+    {
+        if (nOut >= this->tx->vout.size())
+			throw std::runtime_error("CWalletTx::IsEnigmaReserved() : nOut out of range");
+        if (nOut >= vfEnigmaReserved.size())
+			return false;
+        return (!!vfEnigmaReserved[nOut]);
+    }
 
     /**
      * Return depth of transaction in blockchain:
@@ -743,13 +757,8 @@ public:
      * all coins from coinControl are selected; Never select unconfirmed coins
      * if they are not ours
      */
-<<<<<<< HEAD
     bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet,
                     const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
-=======
-    bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<COutput>& setCoinsRet, CAmount& nValueRet,
-                    const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
->>>>>>> 8b4279006 (More CreateCoinStake work.)
 
     /** Get a name for this wallet for logging/debugging purposes.
      */
