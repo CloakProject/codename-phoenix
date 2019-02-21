@@ -743,8 +743,13 @@ public:
      * all coins from coinControl are selected; Never select unconfirmed coins
      * if they are not ours
      */
+<<<<<<< HEAD
     bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet,
                     const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
+=======
+    bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<COutput>& setCoinsRet, CAmount& nValueRet,
+                    const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
+>>>>>>> 8b4279006 (More CreateCoinStake work.)
 
     /** Get a name for this wallet for logging/debugging purposes.
      */
@@ -822,7 +827,7 @@ public:
      * assembled
      */
     bool SelectCoinsMinConf(const CAmount& nTargetValue, const CoinEligibilityFilter& eligibility_filter, std::vector<OutputGroup> groups,
-        std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
+        std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
 
     bool IsSpent(const uint256& hash, unsigned int n) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
 
@@ -1075,14 +1080,10 @@ public:
     
     const std::string& GetLabelName(const CScript& scriptPubKey) const;
     void GetScriptForMining(std::shared_ptr<CReserveScript> &script);
-<<<<<<< HEAD
-    bool SignBlock(std::shared_ptr<CBlock>& pblock);
-=======
 
 	void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result);
 
     void SignBlock(CBlock* pblock, bool &result);
->>>>>>> f369b0238 (Some PoW mining pipeline reworking/refactoring.)
 
     //! signify that a particular wallet feature is now used.
     void SetMinVersion(enum WalletFeature, WalletBatch* batch_in = nullptr) override;
