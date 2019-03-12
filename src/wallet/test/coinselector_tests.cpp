@@ -25,7 +25,7 @@ BOOST_FIXTURE_TEST_SUITE(coinselector_tests, WalletTestingSetup)
 
 std::vector<std::unique_ptr<CWalletTx>> wtxn;
 
-typedef std::set<COutput> CoinSet;
+typedef std::set<CInputCoin> CoinSet;
 
 static std::vector<COutput> vCoins;
 static CWallet testWallet("dummy", WalletDatabase::CreateDummy());
@@ -49,12 +49,7 @@ static void add_coin(const CAmount& nValue, int nInput, CoinSet& set)
     CMutableTransaction tx;
     tx.vout.resize(nInput + 1);
     tx.vout[nInput].nValue = nValue;
-
-    std::unique_ptr<CWalletTx> wtx(new CWalletTx(&testWallet, MakeTransactionRef(std::move(tx))));
-
-    //COutput output(wtx.get(), nInput, 6 * 24, true /* spendable */, true /* solvable */, true /* safe */);
-
-    set.emplace(wtx.get(), nInput, 6 * 24, true /* spendable */, true /* solvable */, true /* safe */);
+    set.emplace(MakeTransactionRef(tx), nInput);
 }
 
 static void add_coin(const CAmount& nValue, int nAge = 6*24, bool fIsFromMe = false, int nInput=0)

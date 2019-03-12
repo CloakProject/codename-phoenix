@@ -338,7 +338,9 @@ public:
     char fFromMe;
     std::string strFromAccount;
     int64_t nOrderPos; //!< position in ordered transaction list
-    std::multimap<int64_t, std::pair<CWalletTx*, CAccountingEntry*>>::const_iterator m_it_wtxOrdered;	std::vector<char> vfEnigmaReserved; // which outputs are reserved for Enigma usage
+    std::multimap<int64_t, std::pair<CWalletTx*, CAccountingEntry*>>::const_iterator m_it_wtxOrdered;
+    std::vector<char> vfEnigmaReserved; // which outputs are reserved for Enigma usage
+
 
     // memory only
     mutable bool fDebitCached;
@@ -350,7 +352,6 @@ public:
     mutable bool fImmatureWatchCreditCached;
     mutable bool fAvailableWatchCreditCached;
     mutable bool fChangeCached;
-    mutable bool fEnigmaReservedCached;
     mutable bool fInMempool;
     mutable CAmount nDebitCached;
     mutable CAmount nCreditCached;
@@ -361,7 +362,6 @@ public:
     mutable CAmount nImmatureWatchCreditCached;
     mutable CAmount nAvailableWatchCreditCached;
     mutable CAmount nChangeCached;
-    mutable CAmount nEnigmaReservedCached;
 
     CWalletTx(const CWallet* pwalletIn, CTransactionRef arg) : CMerkleTx(std::move(arg))
     {
@@ -492,14 +492,14 @@ public:
 
     /** Pass this transaction to the mempool. Fails if absolute fee exceeds absurd fee. */
     bool AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state);
-    
+
     bool IsEnigmaReserved(unsigned int nOut) const
     {
-        if (nOut >= this->tx->vout.size())
-			throw std::runtime_error("CWalletTx::IsEnigmaReserved() : nOut out of range");
-        if (nOut >= vfEnigmaReserved.size())
-			return false;
-        return (!!vfEnigmaReserved[nOut]);
+	if (nOut >= this->tx->vout.size())
+		throw std::runtime_error("CWalletTx::IsEnigmaReserved() : nOut out of range");
+	if (nOut >= vfEnigmaReserved.size())
+		return false;
+	return (vfEnigmaReserved[nOut]);
     }
 
     std::set<uint256> GetConflicts() const;
@@ -796,12 +796,14 @@ public:
         return *database;
     }
 
+    bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
+
     /**
      * Select a set of coins such that nValueRet >= nTargetValue and at least
      * all coins from coinControl are selected; Never select unconfirmed coins
      * if they are not ours
      */
-    bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<COutput>& setCoinsRet, CAmount& nValueRet,
+    bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet,
                     const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
 
     /** Get a name for this wallet for logging/debugging purposes.
@@ -865,15 +867,26 @@ public:
      * Find non-change parent output.
      */
     const CTxOut& FindNonChangeParentOutput(const CTransaction& tx, int output) const;
+    
+    /**
+     * Shuffle and select coins until nTargetValue is reached while avoiding
+     * small change; This method is stochastic for some inputs and upon
+     * completion the coin set and corresponding actual target value is
+     * assembled.
+     * COutput based return.
+     */
+    bool SelectCoinsMinConfStaking(const CAmount& nTargetValue, const CoinEligibilityFilter& eligibility_filter, std::vector<OutputGroup> groups,
+	    std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
 
     /**
      * Shuffle and select coins until nTargetValue is reached while avoiding
      * small change; This method is stochastic for some inputs and upon
      * completion the coin set and corresponding actual target value is
-     * assembled
+     * assembled.
+     * CInputCoin based return.
      */
     bool SelectCoinsMinConf(const CAmount& nTargetValue, const CoinEligibilityFilter& eligibility_filter, std::vector<OutputGroup> groups,
-        std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
+        std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
 
     bool IsSpent(const uint256& hash, unsigned int n) const;
     std::vector<OutputGroup> GroupOutputs(const std::vector<COutput>& outputs, bool single_coin) const;
@@ -1084,8 +1097,8 @@ public:
     const std::string& GetLabelName(const CScript& scriptPubKey) const;
 
     void GetScriptForMining(std::shared_ptr<CReserveScript> &script);
-
-	void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result);
+    
+    void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result);
 
     void SignBlock(CBlock* pblock, bool &result);
 
