@@ -339,10 +339,8 @@ public:
      */
     mutable bool m_is_cache_empty{true};
     mutable bool fChangeCached;
-    mutable bool fEnigmaReservedCached;
     mutable bool fInMempool;
     mutable CAmount nChangeCached;
-    mutable CAmount nEnigmaReservedCached;
 
     CWalletTx(const CWallet* wallet, CTransactionRef arg)
         : pwallet(wallet),
@@ -515,14 +513,14 @@ public:
     std::set<uint256> GetConflicts() const NO_THREAD_SAFETY_ANALYSIS;
     /** Pass this transaction to the mempool. Fails if absolute fee exceeds absurd fee. */
     bool AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state);
-    
+
     bool IsEnigmaReserved(unsigned int nOut) const
     {
-        if (nOut >= this->tx->vout.size())
-			throw std::runtime_error("CWalletTx::IsEnigmaReserved() : nOut out of range");
-        if (nOut >= vfEnigmaReserved.size())
-			return false;
-        return (!!vfEnigmaReserved[nOut]);
+	if (nOut >= this->tx->vout.size())
+		throw std::runtime_error("CWalletTx::IsEnigmaReserved() : nOut out of range");
+	if (nOut >= vfEnigmaReserved.size())
+		return false;
+	return (vfEnigmaReserved[nOut]);
     }
 
     /**
@@ -752,6 +750,8 @@ public:
     }
     WalletDatabase& GetDatabase() const override { return *database; }
 
+    bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
+
     /**
      * Select a set of coins such that nValueRet >= nTargetValue and at least
      * all coins from coinControl are selected; Never select unconfirmed coins
@@ -828,15 +828,25 @@ public:
      * Find non-change parent output.
      */
     const CTxOut& FindNonChangeParentOutput(const CTransaction& tx, int output) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
+    /**
+     * Shuffle and select coins until nTargetValue is reached while avoiding
+     * small change; This method is stochastic for some inputs and upon
+     * completion the coin set and corresponding actual target value is
+     * assembled.
+     * COutput based return.
+     */
+    bool SelectCoinsMinConfStaking(const CAmount& nTargetValue, const CoinEligibilityFilter& eligibility_filter, std::vector<OutputGroup> groups,
+	    std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
 
     /**
      * Shuffle and select coins until nTargetValue is reached while avoiding
      * small change; This method is stochastic for some inputs and upon
      * completion the coin set and corresponding actual target value is
-     * assembled
+     * assembled.
+     * CInputCoin based return.
      */
     bool SelectCoinsMinConf(const CAmount& nTargetValue, const CoinEligibilityFilter& eligibility_filter, std::vector<OutputGroup> groups,
-        std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
+        std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
 
     bool IsSpent(const uint256& hash, unsigned int n) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
 
@@ -1089,8 +1099,8 @@ public:
     
     const std::string& GetLabelName(const CScript& scriptPubKey) const;
     void GetScriptForMining(std::shared_ptr<CReserveScript> &script);
-
-	void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result);
+    
+    void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result);
 
     void SignBlock(CBlock* pblock, bool &result);
 
