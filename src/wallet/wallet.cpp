@@ -3660,10 +3660,10 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
     if (nBalance <= nReserveBalance)
         return false;
         */
-
-        //std::set<std::pair<const CWalletTx*, unsigned int> > setCoins;
-    std::set<COutput> setCoins;
-    std::vector<COutput> vwtxPrev;
+    
+    //std::set<std::pair<const CWalletTx*, unsigned int> > setCoins;
+    std::set<CInputCoin> setCoins;
+    std::vector<const CWalletTx*> vwtxPrev;
     int64_t nValueIn = 0;
     //if (!SelectCoins(nBalance - nReserveBalance, txNew.nTime, setCoins, nValueIn))
 
@@ -3688,7 +3688,8 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
     for (const auto& entry : setCoins)
     {
-        uint256 hashPrevTx = entry.GetInputCoin().outpoint.hash;
+        //uint256 hashPrevTx = entry.GetInputCoin().outpoint.hash;
+        uint256 hashPrevTx = entry.outpoint.hash;
         uint256 hashPrevBlock;
         CTransactionRef txPrev;
 
@@ -3726,7 +3727,19 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
         if (blockPrev.GetBlockTime() + Params().GetConsensus().nStakeMinAge > mtx.nTime - nMaxStakeSearchInterval)
             continue; // only count coins meeting min age requirement
 
+
+        // create matching COutput for [CInputCoin] entry
+        const CWalletTx* wtx = GetWalletTx(entry.outpoint.hash);
+        int outpointIndex = entry.outpoint.n;
+        bool mine = IsMine(wtx->tx->vout[outpointIndex]);
+        bool solvable = IsSolvable(*this, wtx->tx->vout[outpointIndex].scriptPubKey);
+        bool safeTx = false;
+        bool useMaxSig = false;
+        bool spendable = ((mine & ISMINE_SPENDABLE) != ISMINE_NO) || (((mine & ISMINE_WATCH_ONLY) != ISMINE_NO) && solvable);
+        //COutput entryOutput = COutput(wtx, outpointIndex, wtx->GetDepthInMainChain(), solvable, spendable, safeTx);
+
         bool fKernelFound = false;
+
         for (unsigned int n = 0; n < std::min(nSearchInterval, (int64_t)nMaxStakeSearchInterval) && !fKernelFound && !ShutdownRequested(); n++)
         {
             // printf(">> In.....\n");
@@ -3742,7 +3755,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
                 std::vector<valtype> vSolutions;
                 txnouttype whichType;
                 CScript scriptPubKeyOut;
-                scriptPubKeyKernel = entry.GetInputCoin().txout.scriptPubKey;
+                scriptPubKeyKernel = entry.txout.scriptPubKey;
                 if (!Solver(scriptPubKeyKernel, whichType, vSolutions))
                 {
                     if (gArgs.GetBoolArg("-printcoinstake", false))
@@ -3777,11 +3790,11 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
                 mtx.nTime -= n;
                 mtx.vin.push_back(CTxIn(hashPrevTx, prevTxOffsetIndex));
-                nCredit += entry.GetInputCoin().txout.nValue;
+                nCredit += entry.txout.nValue;
 
                 // printf(">> Wallet: CreateCoinStake: nCredit = %"PRI64d"\n", nCredit);
 
-                vwtxPrev.push_back(entry);
+                vwtxPrev.push_back(wtx);
                 mtx.vout.push_back(CTxOut(0, scriptPubKeyOut));
                 if (blockPrev.GetBlockTime() + nStakeSplitAge > mtx.nTime)
                     mtx.vout.push_back(CTxOut(0, scriptPubKeyOut)); //split stake
@@ -3804,12 +3817,15 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
     for (const auto& entry : setCoins)
     {
-        uint256 hashPrevTx = entry.GetInputCoin().outpoint.hash;
+        uint256 hashPrevTx = entry.outpoint.hash;
+
+        // get wallet tx with output for our entry input
+        const CWalletTx* wtx = GetWalletTx(hashPrevTx);
 
         // Attempt to add more inputs
         // Only add coins of the same key/address as kernel
-        if (mtx.vout.size() == 2 && ((entry.GetInputCoin().txout.scriptPubKey == scriptPubKeyKernel || entry.GetInputCoin().txout.scriptPubKey == mtx.vout[1].scriptPubKey))
-            && entry.GetInputCoin().outpoint.hash != mtx.vin[0].prevout.hash)
+        if (mtx.vout.size() == 2 && ((entry.txout.scriptPubKey == scriptPubKeyKernel || entry.txout.scriptPubKey == mtx.vout[1].scriptPubKey))
+            && entry.outpoint.hash != mtx.vin[0].prevout.hash)
         {
             // Stop adding more inputs if already too many inputs
             if (mtx.vin.size() >= 100)
@@ -3818,23 +3834,35 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
             if (nCredit > nCombineThreshold)
                 break;
             // Stop adding inputs if reached reserve limit
-            if (nCredit + entry.GetInputCoin().txout.nValue > nBalance - nReserveBalance)
+            if (nCredit + entry.txout.nValue > nBalance - nReserveBalance)
                 break;
             // Do not add additional significant input
-            if (entry.GetInputCoin().txout.nValue > nCombineThreshold)
+            if (entry.txout.nValue > nCombineThreshold)
                 continue;
             // Do not add input that is still too young
-            if (entry.tx->tx->nTime + Params().GetConsensus().nStakeMaxAge > mtx.nTime)
+            if (wtx->tx->nTime + Params().GetConsensus().nStakeMaxAge > mtx.nTime)
                 continue;
             // Do not add coins that are reserved for Enigma
-            if (entry.tx->IsEnigmaReserved(entry.GetInputCoin().outpoint.n))
+            if (wtx->IsEnigmaReserved(entry.outpoint.n))
                 continue;
 
-            mtx.vin.push_back(CTxIn(entry.GetInputCoin().outpoint.hash, entry.GetInputCoin().outpoint.n));
-            nCredit += entry.GetInputCoin().txout.nValue;
-            vwtxPrev.push_back(entry);
+            mtx.vin.push_back(CTxIn(entry.outpoint.hash, entry.outpoint.n));
+            nCredit += entry.txout.nValue;
+            vwtxPrev.push_back(wtx);
         }
     }
+    /*
+    // Calculate coin age reward
+    {
+        uint64_t nCoinAge;
+        CTxDB txdb("r");
+        const CBlockIndex* pIndex0 = GetLastBlockIndex(pindexBest, false);
+
+        if (!txNew.GetCoinAge(txdb, nCoinAge))
+            return error("CreateCoinStake : failed to calculate coin age");
+        nCredit += GetProofOfStakeReward(nCoinAge, nBits, txNew.nTime, pIndex0->nHeight);
+    }
+    */
 
     txNew = MakeTransactionRef(mtx);
     result = true;

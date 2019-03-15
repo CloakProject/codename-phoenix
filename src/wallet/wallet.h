@@ -750,8 +750,6 @@ public:
     }
     WalletDatabase& GetDatabase() const override { return *database; }
 
-    bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
-
     /**
      * Select a set of coins such that nValueRet >= nTargetValue and at least
      * all coins from coinControl are selected; Never select unconfirmed coins
@@ -828,16 +826,6 @@ public:
      * Find non-change parent output.
      */
     const CTxOut& FindNonChangeParentOutput(const CTransaction& tx, int output) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);
-    /**
-     * Shuffle and select coins until nTargetValue is reached while avoiding
-     * small change; This method is stochastic for some inputs and upon
-     * completion the coin set and corresponding actual target value is
-     * assembled.
-     * COutput based return.
-     */
-    bool SelectCoinsMinConfStaking(const CAmount& nTargetValue, const CoinEligibilityFilter& eligibility_filter, std::vector<OutputGroup> groups,
-	    std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
-
     /**
      * Shuffle and select coins until nTargetValue is reached while avoiding
      * small change; This method is stochastic for some inputs and upon
