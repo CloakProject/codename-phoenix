@@ -3623,12 +3623,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 
     if (block.IsProofOfStake())
     {
-	    // Second transaction must be coinstake, the rest must not be
-	    if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
-		    return state.DoS(100, error("CheckBlock() : second tx is not coinstake"));
-	    for (unsigned int i = 2; i < block.vtx.size(); i++)
-		    if (block.vtx[i]->IsCoinStake())
-			    return state.DoS(100, error("CheckBlock() : more than one coinstake"));
+	// Second transaction must be coinstake, the rest must not be
+	if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
+		return state.DoS(100, error("CheckBlock() : second tx is not coinstake"));
+	for (unsigned int i = 2; i < block.vtx.size(); i++)
+		if (block.vtx[i]->IsCoinStake())
+			return state.DoS(100, error("CheckBlock() : more than one coinstake"));
     }
 
     // All potential-corruption validation must be done before we do any
