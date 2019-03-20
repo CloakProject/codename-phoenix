@@ -105,7 +105,6 @@ unsigned int CTransaction::GetTotalSize() const
     return ::GetSerializeSize(*this, PROTOCOL_VERSION);
 }
 
-
 // ppcoin: total coin age spent in transaction, in the unit of coin-days.
 // Only those coins meeting minimum age requirement counts. As those
 // transactions not in main chain are not currently indexed so we
@@ -123,7 +122,6 @@ bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
 
     //BOOST_FOREACH(const CTxIn& txin, vin)
     for (const CTxIn& txin : vin) {
-    {
         // First try finding the previous transaction in database
         CTransactionRef txPrev;
         uint256 hashPrevBlock = uint256();
@@ -168,8 +166,9 @@ std::string CTransaction::ToString() const
         nVersion,
         vin.size(),
         vout.size(),
-		nTime,
+        nTime,
         nLockTime);
+
     for (const auto& tx_in : vin)
         str += "    " + tx_in.ToString() + "\n";
     for (const auto& tx_in : vin)

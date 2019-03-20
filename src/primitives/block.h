@@ -100,7 +100,7 @@ public:
     {
         CBlockHeader::SetNull();
         vtx.clear();
-		vchBlockSig.clear();
+        vchBlockSig.clear();
         fChecked = false;
     }
 
@@ -143,6 +143,9 @@ public:
 	}
 	return maxTransactionTime;
     }
+    
+    // ppcoin: total coin age spent in block, in the unit of coin-days.
+    bool GetCoinAge(uint64_t& nCoinAge) const;
 };
 
 /** Describes a place in the block chain to another node such that if the
