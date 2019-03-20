@@ -3850,21 +3850,21 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
             nCredit += entry.txout.nValue;
             vwtxPrev.push_back(wtx);
         }
-    }
-    /*
-    // Calculate coin age reward
-    {
-        uint64_t nCoinAge;
-        CTxDB txdb("r");
-        const CBlockIndex* pIndex0 = GetLastBlockIndex(pindexBest, false);
-
-        if (!txNew.GetCoinAge(txdb, nCoinAge))
-            return error("CreateCoinStake : failed to calculate coin age");
-        nCredit += GetProofOfStakeReward(nCoinAge, nBits, txNew.nTime, pIndex0->nHeight);
-    }
-    */
+    }     
 
     txNew = MakeTransactionRef(mtx);
+
+    // Calculate coin age reward
+    uint64_t nCoinAge;
+    const CBlockIndex* pIndex0 = GetLastBlockIndex(chainActive.Tip(), false);
+
+    if (!txNew->GetCoinAge(nCoinAge)) {
+        error("CreateCoinStake : failed to calculate coin age"); 
+        return;
+    }
+    nCredit += GetProofOfStakeReward(nCoinAge, nBits, txNew->nTime, pIndex0->nHeight);
+
+
     result = true;
 }
 

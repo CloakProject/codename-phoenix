@@ -343,7 +343,7 @@ public:
      */
     unsigned int GetTotalSize() const;
 
-    bool GetCoinAge(CTxDB& txdb, uint64& nCoinAge) const;
+    bool GetCoinAge(uint64_t& nCoinAge) const;
     
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {
