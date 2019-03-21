@@ -3866,6 +3866,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
     txNew = MakeTransactionRef(mtx);
 
     int64_t nMinFee = 0;
+    /*
     while (true)
     {
         // Set output amount
@@ -3904,7 +3905,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
             break;
         }
     }
-
+    */
     
     result = true;
 }

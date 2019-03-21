@@ -109,9 +109,6 @@ bool SelectCoinsBnB(std::vector<OutputGroup>& utxo_pool, const CAmount& target_v
 // CInputCoin output version
 bool SelectCoinsBnB(std::vector<OutputGroup>& utxo_pool, const CAmount& target_value, const CAmount& cost_of_change, std::set<CInputCoin>& out_set, CAmount& value_ret, CAmount not_input_fees);
 
-// Original coin selection algorithm as a fallback - with COutput based return
-bool KnapsackSolverStaking(const CAmount& nTargetValue, std::vector<OutputGroup>& groups, std::set<COutput>& setCoinsRet, CAmount& nValueRet);
-
 // Original coin selection algorithm as a fallback - with CInputCoin based return
 bool KnapsackSolver(const CAmount& nTargetValue, std::vector<OutputGroup>& groups, std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet);
 
