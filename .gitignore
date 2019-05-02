@@ -158,3 +158,6 @@ build_msvc/bitcoin.sln.DotSettings.user
 
 #bdb [default] build dir
 /db4
+
+#visual studio code
+/.vscode

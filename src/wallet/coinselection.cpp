@@ -10,7 +10,7 @@
 #include <util/moneystr.h>
 #include <util.h>
 #include <utilmoneystr.h>
-#include <wallet.h>
+#include "wallet.h"
 
 // Descending order comparator
 struct {
