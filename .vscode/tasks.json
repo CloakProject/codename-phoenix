@@ -49,7 +49,7 @@
             // start the build without prompting for task selection, use "group": "build" otherwise
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": false
             },
             "presentation": {
                 "echo": true,
