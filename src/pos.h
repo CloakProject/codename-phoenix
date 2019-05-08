@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 class CBlockHeader;
+class CBlock;
 class CBlockIndex;
 class CValidationState;
 class uint256;
@@ -21,6 +22,10 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
 bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeModifier, bool& fGeneratedStakeModifier);
 
 bool CheckStakeModifierCheckpoints(int nHeight, unsigned int nStakeModifierChecksum);
+
+bool GetCoinAgeBlock(const CBlock& block, uint64_t& nCoinAge);
+
+bool GetCoinAgeTX(const CTransactionRef& tx, uint64_t& nCoinAge);
 
 unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex);
 

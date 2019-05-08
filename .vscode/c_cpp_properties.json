@@ -4,9 +4,7 @@
             "name": "Linux",
             "defines": [],
             "intelliSenseMode": "gcc-x64",
-            "limitSymbolsToIncludedHeaders": true,
-            "databaseFilename": "",
-            "path": [
+            "includePath": [
                 "/usr/include/c++/6",
                 "/usr/include/x86_64-linux-gnu/c++/6",
                 "/usr/include/c++/6/backward",
@@ -15,6 +13,7 @@
                 "/usr/lib/gcc/x86_64-linux-gnu/6/include-fixed",
                 "/usr/include/x86_64-linux-gnu",
                 "/usr/include",
+                "${workspaceRoot}/src",
                 "${workspaceRoot}"
             ]            
         },
@@ -22,13 +21,10 @@
             "name": "Mac",
             "defines": [],
             "intelliSenseMode": "clang-x64",
-            "limitSymbolsToIncludedHeaders": true,
-            "databaseFilename": "",
-            "path": [
-                "/usr/include/c++/6",
-                "/usr/include/c++/6/backward",
+            "includePath": [
                 "/usr/local/include",
-                "/usr/include",
+                "${workspaceRoot}/src/leveldb/include/leveldb",
+                "${workspaceRoot}/src",
                 "${workspaceRoot}"
             ]            
         }
