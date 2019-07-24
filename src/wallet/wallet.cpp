@@ -3977,7 +3977,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
     // Calculate coin age reward
     uint64_t nCoinAge;
-    if (!txNew->GetCoinAge(nCoinAge)) {
+    if (!GetCoinAge(nCoinAge, txNew)) {
         error("CreateCoinStake : failed to calculate coin age");
         return;
     }
