@@ -1326,8 +1326,7 @@ uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn
         unsigned int nOut = nIn;
         if (nOut >= txTmp.vout.size())
         {
-            // TODO cloak: need to log this out of range event! 
-            //LogPrintf("ERROR: SignatureHash() : nOut=%d out of range\n", nOut);
+            LogPrintf("ERROR: SignatureHash() : nOut=%d out of range\n", nOut);
             return one;
         }
         txTmp.vout.resize(nOut + 1);

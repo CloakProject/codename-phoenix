@@ -20,13 +20,13 @@ const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfSta
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
-    assert("GetNextWorkRequired deprecated for Cloak- use GetNextTargetRequired");
+    assert(true &&  "GetNextWorkRequired deprecated for Cloak- use GetNextTargetRequired");
     return 0;
 }
 
 unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
 {
-    assert("CalculateNextWorkRequired deprecated for Cloak- use GetNextTargetRequired");
+    assert(true && "CalculateNextWorkRequired deprecated for Cloak- use GetNextTargetRequired");
     return 0;
 }
 
