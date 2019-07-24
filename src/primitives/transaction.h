@@ -342,6 +342,8 @@ public:
      * @return Total transaction size in bytes
      */
     unsigned int GetTotalSize() const;
+
+    bool GetCoinAge(uint64_t& nCoinAge) const;
     
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {

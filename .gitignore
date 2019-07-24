@@ -155,9 +155,3 @@ build_msvc/bitcoin.sln.DotSettings.user
 build_msvc/bitcoin.sln.DotSettings.user
 build_msvc/bitcoin.sln.DotSettings.user
 *.user
-
-#bdb [default] build dir
-/db4
-
-#visual studio code
-/.vscode

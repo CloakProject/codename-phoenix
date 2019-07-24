@@ -3626,6 +3626,7 @@ void ReserveDestination::ReturnDestination()
 
 typedef std::vector<unsigned char> valtype;
 
+
 // ppcoin: create coin stake transaction
 void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result)
 {
@@ -3854,7 +3855,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
     // Calculate coin age reward
     uint64_t nCoinAge;
-    if (!GetCoinAgeTX(txNew, nCoinAge)) {
+    if (!txNew->GetCoinAge(nCoinAge)) {
         error("CreateCoinStake : failed to calculate coin age");
         return;
     }
