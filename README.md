@@ -25,8 +25,11 @@ information or see https://opensource.org/licenses/MIT.
 Development Process
 -------------------
 
-The `master` branch is regularly built (see `doc/build-*.md` for instructions) and tested, but it is not guaranteed to be
-completely stable. Tags are created regularly to indicate new official, stable release versions of Cloak Core.
+**Important**: Configure with [--disable-tests] and [--disable-bench] for now, while the codebase upgrade is in its early stages. Tests will be updated in due course and this requirement will cease.
+
+The `master` branch is regularly built and tested, but is not guaranteed to be
+completely stable. [Tags](https://github.com/bitcoin/bitcoin/tags) are created
+regularly to indicate new official, stable release versions of Cloak Core.
 
 The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md)
 and useful hints for developers can be found in [doc/developer-notes.md](doc/developer-notes.md).
