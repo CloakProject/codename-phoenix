@@ -3,7 +3,7 @@ Cloak Core integration/staging tree
 
 [![Build Status](https://travis-ci.org/bitcoin/bitcoin.svg?branch=master)](https://travis-ci.org/bitcoin/bitcoin)
 
-https://bitcoincore.org
+https://www.cloakcoin.com
 
 What is Cloak?
 ----------------
@@ -26,6 +26,8 @@ information or see https://opensource.org/licenses/MIT.
 
 Development Process
 -------------------
+
+**Important**: Configure with [--disable-tests] and [--disable-bench] for now, while the codebase upgrade is in its early stages. Tests will be updated in due course and this requirement will cease.
 
 The `master` branch is regularly built and tested, but is not guaranteed to be
 completely stable. [Tags](https://github.com/bitcoin/bitcoin/tags) are created
