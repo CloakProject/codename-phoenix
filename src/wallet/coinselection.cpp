@@ -5,6 +5,7 @@
 #include <wallet/coinselection.h>
 #include <util.h>
 #include <utilmoneystr.h>
+#include <wallet/wallet.h>
 
 // Descending order comparator
 struct {
@@ -284,7 +285,6 @@ bool KnapsackSolver(const CAmount& nTargetValue, std::vector<OutputGroup>& group
             LogPrint(BCLog::SELECTCOINS, "total %s\n", FormatMoney(nBest));
         }
     }
-
     return true;
 }
 

@@ -289,6 +289,8 @@ public:
     // Default transaction version.
     static const int32_t CURRENT_VERSION = 1;
 
+	// todo: cloak - double check MAX_STANDARD_VERSION is correct!
+
     // Changing the default transaction version requires a two step process: first
     // adapting relay policy by bumping MAX_STANDARD_VERSION, and then later date
     // bumping the default CURRENT_VERSION at which point both CURRENT_VERSION and
@@ -301,7 +303,7 @@ public:
     // and bypass the constness. This is safe, as they update the entire
     // structure, including the hash.
     const int32_t nVersion;
-	const uint32_t nTime;
+    const uint32_t nTime;
     const std::vector<CTxIn> vin;
     const std::vector<CTxOut> vout;
     const uint32_t nLockTime;
@@ -354,7 +356,7 @@ public:
      * @return Total transaction size in bytes
      */
     unsigned int GetTotalSize() const;
-    
+
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {
         return a.hash == b.hash;
@@ -406,7 +408,6 @@ struct CMutableTransaction {
     {
         SerializeTransaction(*this, s);
     }
-
 
     template <typename Stream>
     inline void Unserialize(Stream& s)

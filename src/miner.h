@@ -200,9 +200,13 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);
 
 // proof of stake
-void CloakStaker(const CChainParams& chainparams);
-void SetStaking(bool mode);
-bool GetStaking();
+class Staker {
+public:
+	void static CloakStaker(const CChainParams& chainparams);
+	void static SetStaking(bool mode);
+	bool static GetStaking();
+private:
+};
 
 #ifdef ENABLE_WALLET
 // ppcoin: sign block

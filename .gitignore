@@ -119,3 +119,7 @@ contrib/devtools/split-debug.sh
 *.user
 build_msvc/go1.bat
 build_msvc/go2.bat
+build_msvc/bitcoin.sln.DotSettings.user
+build_msvc/bitcoin.sln.DotSettings.user
+build_msvc/bitcoin.sln.DotSettings.user
+*.user
