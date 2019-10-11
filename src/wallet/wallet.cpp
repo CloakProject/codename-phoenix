@@ -3731,7 +3731,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
         // create matching COutput for [CInputCoin] entry
         const CWalletTx* wtx = GetWalletTx(entry.outpoint.hash);
         int outpointIndex = entry.outpoint.n;
-        bool mine = IsMine(wtx->tx->vout[outpointIndex]);
+        isminetype mine = IsMine(wtx->tx->vout[outpointIndex]);
         bool solvable = IsSolvable(*this, wtx->tx->vout[outpointIndex].scriptPubKey);
         bool safeTx = false;
         bool useMaxSig = false;
