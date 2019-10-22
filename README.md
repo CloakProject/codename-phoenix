@@ -1,9 +1,7 @@
 Cloak Core integration/staging tree
 =====================================
 
-[![Build Status](https://travis-ci.org/bitcoin/bitcoin.svg?branch=master)](https://travis-ci.org/bitcoin/bitcoin)
-
-https://bitcoincore.org
+https://www.cloakcoin.com
 
 What is Cloak?
 ----------------
@@ -15,8 +13,8 @@ out collectively by the network. Cloak Core is the name of open source
 software which enables the use of this currency.
 
 For more information, as well as an immediately useable, binary version of
-the Cloak Core software, see https://bitcoincore.org/en/download/, or read the
-[original whitepaper](https://bitcoincore.org/bitcoin.pdf).
+the Cloak Core software, see https://www.cloakcoin.com, or read the
+[original whitepaper](https://www.cloakcoin.com/en/whitepaper).
 
 License
 -------
