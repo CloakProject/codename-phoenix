@@ -65,7 +65,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits, unsigned int
 static int64_t GetStakeModifierSelectionIntervalSection(int nSection)
 {
     assert(nSection >= 0 && nSection < 64);
-    unsigned int nModifierInterval = Params().GetConsensus().nStakeModierInterval;
+    unsigned int nModifierInterval = Params().GetConsensus().nStakeModifierInterval;
     int64_t a = nModifierInterval * 63 / (63 + ((63 - nSection) * (MODIFIER_INTERVAL_RATIO - 1)));
     return a;
 }
@@ -183,7 +183,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     
     LogPrint(BCLog::SELECTCOINS, "ComputeNextStakeModifier: prev modifier=0x%016x time=%s\n", nStakeModifier, DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nModifierTime).c_str());
 
-    unsigned int nModifierInterval = Params().GetConsensus().nStakeModierInterval;
+    unsigned int nModifierInterval = Params().GetConsensus().nStakeModifierInterval;
     
     if (nModifierTime / nModifierInterval >= pindexPrev->GetBlockTime() / nModifierInterval)
         return true;

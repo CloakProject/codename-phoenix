@@ -82,7 +82,8 @@ public:
         consensus.nStakeMinAge = 60 * 60 * 1 * 1; // 1h, minimum age for coin age:  6h
         consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight:  4d 60*60*24*1
         consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
-        consensus.nStakeModierInterval = MODIFIER_INTERVAL;
+        consensus.nStakeModifierInterval = MODIFIER_INTERVAL;
+        consensus.nCoinbaseMaturity = 40;
 
         // Proof of work
         consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 20;
@@ -233,7 +234,7 @@ public:
 };
 
 /**
- * Testnet (v3)
+ * Testnet (v4)
  */
 class CTestNetParams : public CChainParams {
 public:
@@ -258,7 +259,8 @@ public:
         consensus.nStakeMinAge = 2 * 60; // test net min age is 2 min
         consensus.nStakeMaxAge = 6 * 60; // test net min age is 6 min
         consensus.nStakeTargetSpacing = 60; // 60 sec block spacing
-        consensus.nStakeModierInterval = 60;
+        consensus.nStakeModifierInterval = 60;
+        consensus.nCoinbaseMaturity = 10; // test maturity is 10 blocks
 
         // Proof of work
         consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 2;
@@ -283,11 +285,14 @@ public:
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000"); //1354312
 
-	pchMessageStart[0] = 0x28;
-        pchMessageStart[1] = 0x10;
-        pchMessageStart[2] = 0x76;
-        pchMessageStart[3] = 0x2B;
-        nDefaultPort = 29664;
+        unsigned int testnetNumber = 4;	//	hardcoded to testnet4 for now
+        unsigned char testNum = testnetNumber + 2;
+
+        pchMessageStart[0] = 0x22 + testNum;
+        pchMessageStart[1] = 0x0a + testNum;
+        pchMessageStart[2] = 0x70 + testNum;
+        pchMessageStart[3] = 0x25 + testNum;
+        nDefaultPort = 29665;
         nPruneAfterHeight = 1000;
         m_assumed_blockchain_size = 40;
         m_assumed_chain_state_size = 2;

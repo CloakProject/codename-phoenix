@@ -90,7 +90,8 @@ struct Params {
     unsigned int nStakeMinAge;
     unsigned int nStakeMaxAge;
     unsigned int nStakeTargetSpacing;
-    unsigned int nStakeModierInterval;
+    unsigned int nStakeModifierInterval;
+    unsigned int nCoinbaseMaturity;
 };
 } // namespace Consensus
 
