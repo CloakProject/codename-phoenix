@@ -476,7 +476,7 @@ public:
 		// Proof of stake
         consensus.nProofOfStakeLimit = ~arith_uint256("0") >> 2;
         consensus.nStakeMinAge = 2 * 60; // regtest min age is 2 min
-        consensus.nStakeMaxAge = 6 * 60; // regtest min age is 6 min
+        consensus.nStakeMaxAge = 6 * 60; // regtest max age is 6 min
         consensus.nStakeTargetSpacing = 60; // 60 sec block spacing
         consensus.nStakeModifierInterval = 60;
         consensus.nCoinbaseMaturity = 10; // regtest maturity is 10 blocks
