@@ -8,6 +8,11 @@
 #include <hash.h>
 #include <tinyformat.h>
 #include <utilstrencodings.h>
+#include <arith_uint256.h>
+#include <addrman.h>
+#include <primitives/block.h>
+#include <chainparams.h>
+#include <validation.h>
 
 std::string COutPoint::ToString() const
 {
@@ -104,8 +109,9 @@ std::string CTransaction::ToString() const
         nVersion,
         vin.size(),
         vout.size(),
-		nTime,
+        nTime,
         nLockTime);
+
     for (const auto& tx_in : vin)
         str += "    " + tx_in.ToString() + "\n";
     for (const auto& tx_in : vin)

@@ -11,6 +11,7 @@
 #include <txmempool.h>
 #include <util.h>
 #include <validation.h>
+#include <keystore.h>
 
 #include <list>
 #include <atomic>
@@ -30,6 +31,7 @@ struct MainSignalsInstance {
     boost::signals2::signal<void (const CBlockIndex *, const std::shared_ptr<const CBlock>&)> NewPoWValidBlock;
     boost::signals2::signal<void (std::shared_ptr<CReserveScript>&)> GetScriptForMining;
     boost::signals2::signal<void (CBlock* pblock, bool &result)> SignBlock;
+    boost::signals2::signal<void (unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result)> CreateCoinStake;
 
     // We are not allowed to assume the scheduler only runs in one thread,
     // but must ensure all callbacks happen in-order, so we end up creating
@@ -86,6 +88,7 @@ void RegisterValidationInterface(CValidationInterface* pwalletIn) {
     g_signals.m_internals->NewPoWValidBlock.connect(boost::bind(&CValidationInterface::NewPoWValidBlock, pwalletIn, _1, _2));
     g_signals.m_internals->GetScriptForMining.connect(boost::bind(&CValidationInterface::GetScriptForMining, pwalletIn, _1));
     g_signals.m_internals->SignBlock.connect(boost::bind(&CValidationInterface::SignBlock, pwalletIn, _1, _2));
+    g_signals.m_internals->CreateCoinStake.connect(boost::bind(&CValidationInterface::CreateCoinStake, pwalletIn, _1, _2, _3, _4));
 }
 
 void UnregisterValidationInterface(CValidationInterface* pwalletIn) {
@@ -100,6 +103,7 @@ void UnregisterValidationInterface(CValidationInterface* pwalletIn) {
     g_signals.m_internals->NewPoWValidBlock.disconnect(boost::bind(&CValidationInterface::NewPoWValidBlock, pwalletIn, _1, _2));
     g_signals.m_internals->GetScriptForMining.disconnect(boost::bind(&CValidationInterface::GetScriptForMining, pwalletIn, _1));
     g_signals.m_internals->SignBlock.disconnect(boost::bind(&CValidationInterface::SignBlock, pwalletIn, _1, _2));
+    g_signals.m_internals->CreateCoinStake.disconnect(boost::bind(&CValidationInterface::CreateCoinStake, pwalletIn, _1, _2, _3, _4));
 }
 
 void UnregisterAllValidationInterfaces() {
@@ -117,6 +121,7 @@ void UnregisterAllValidationInterfaces() {
     g_signals.m_internals->NewPoWValidBlock.disconnect_all_slots();
     g_signals.m_internals->GetScriptForMining.disconnect_all_slots();
     g_signals.m_internals->SignBlock.disconnect_all_slots();
+    g_signals.m_internals->CreateCoinStake.disconnect_all_slots();
 }
 
 void CallFunctionInValidationInterfaceQueue(std::function<void ()> func) {
@@ -191,7 +196,10 @@ void CMainSignals::GetScriptForMining(std::shared_ptr<CReserveScript>& script) {
     m_internals->GetScriptForMining(script);
 }
 
-void CMainSignals::SignBlock(CBlock* pblock, bool &result)
-{
+void CMainSignals::SignBlock(CBlock* pblock, bool &result){
     m_internals->SignBlock(pblock, result);
+}
+
+void CMainSignals::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result){
+    m_internals->CreateCoinStake(nBits, nSearchInterval, txNew, result);
 }

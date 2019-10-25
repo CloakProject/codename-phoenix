@@ -1056,16 +1056,10 @@ bool GetTransaction(const uint256& hash, CTransactionRef& txOut, const Consensus
     return false;
 }
 
-
-
-
-
-
 //////////////////////////////////////////////////////////////////////////////
 //
 // CBlock and CBlockIndex
 //
-
 static bool WriteBlockToDisk(const CBlock& block, CDiskBlockPos& pos, const CMessageHeader::MessageStartChars& messageStart)
 {
     // Open history file to append
@@ -1173,7 +1167,7 @@ bool ReadRawBlockFromDisk(std::vector<uint8_t>& block, const CBlockIndex* pindex
     return ReadRawBlockFromDisk(block, block_pos, message_start);
 }
 
-CAmount GetBlockSubsidy(int nHeight, CAmount fees, const Consensus::Params& consensusParams)
+CAmount GetBlockSubsidy(int nHeight, CAmount fees)
 {
     int64_t nSubsidy = 496 * COIN;
 
@@ -2157,7 +2151,7 @@ bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBl
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint(BCLog::BENCH, "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\n", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);
 
-    CAmount blockReward = GetBlockSubsidy(pindex->nHeight, nFees, chainparams.GetConsensus());
+    CAmount blockReward = GetBlockSubsidy(pindex->nHeight, nFees);
     if (block.vtx[0]->GetValueOut() > blockReward)
         return state.DoS(100,
                          error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
@@ -3241,12 +3235,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P
 
     if (block.IsProofOfStake())
     {
-	    // Second transaction must be coinstake, the rest must not be
-	    if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
-		    return state.DoS(100, error("CheckBlock() : second tx is not coinstake"));
-	    for (unsigned int i = 2; i < block.vtx.size(); i++)
-		    if (block.vtx[i]->IsCoinStake())
-			    return state.DoS(100, error("CheckBlock() : more than one coinstake"));
+	// Second transaction must be coinstake, the rest must not be
+	if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
+		return state.DoS(100, error("CheckBlock() : second tx is not coinstake"));
+	for (unsigned int i = 2; i < block.vtx.size(); i++)
+		if (block.vtx[i]->IsCoinStake())
+			return state.DoS(100, error("CheckBlock() : more than one coinstake"));
     }
 
     // All potential-corruption validation must be done before we do any

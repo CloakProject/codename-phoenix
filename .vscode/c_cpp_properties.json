@@ -16,7 +16,7 @@
                 "/usr/include/x86_64-linux-gnu",
                 "/usr/include",
                 "${workspaceRoot}"
-            ]            
+            ]
         },
         {
             "name": "Mac",
@@ -30,7 +30,10 @@
                 "/usr/local/include",
                 "/usr/include",
                 "${workspaceRoot}"
-            ]            
+            ],
+            "includePath": [
+                "C:\\_cloak\\codename-phoenix\\src"
+            ]
         }
     ],
     "version": 4

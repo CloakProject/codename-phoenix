@@ -65,7 +65,7 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits, unsigned int
 static int64_t GetStakeModifierSelectionIntervalSection(int nSection)
 {
     assert(nSection >= 0 && nSection < 64);
-    unsigned int nModifierInterval = Params().GetConsensus().nStakeModierInterval;
+    unsigned int nModifierInterval = Params().GetConsensus().nStakeModifierInterval;
     int64_t a = nModifierInterval * 63 / (63 + ((63 - nSection) * (MODIFIER_INTERVAL_RATIO - 1)));
     return a;
 }
@@ -181,7 +181,7 @@ bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeMod
     
     LogPrint(BCLog::SELECTCOINS, "ComputeNextStakeModifier: prev modifier=0x%016x time=%s\n", nStakeModifier, DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nModifierTime).c_str());
 
-    unsigned int nModifierInterval = Params().GetConsensus().nStakeModierInterval;
+    unsigned int nModifierInterval = Params().GetConsensus().nStakeModifierInterval;
     
     if (nModifierTime / nModifierInterval >= pindexPrev->GetBlockTime() / nModifierInterval)
         return true;
@@ -367,7 +367,7 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     // this change increases active coins participating the hash and helps
     // to secure the network when proof-of-stake difficulty is low
     int64_t nTimeWeight = std::min((int64_t)nTimeTx - txPrev->nTime, (int64_t)Params().GetConsensus().nStakeMaxAge) - Params().GetConsensus().nStakeMinAge;
-    arith_uint512 bnCoinDayWeight = arith_uint512(nValueIn) * nTimeWeight / COIN / (24 * 60 * 60);
+    arith_uint512 bnCoinDayWeight = arith_uint512(nValueIn) * nTimeWeight / (COIN / 100) / (24 * 60 * 60);
 
     // We need to convert to uint512 to prevent overflow when multiplying by 1st block coins
     std::string bnTargetPerCoinDayHex = bnTargetPerCoinDay.GetHex();
@@ -435,6 +435,85 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     return true;
 }
 
+// ppcoin: total coin age spent in block, in the unit of coin-days.
+bool GetCoinAgeBlock(uint64_t& nCoinAge, CBlock block)
+{
+    nCoinAge = 0;
+    for (const CTransactionRef& tx : block.vtx)
+    {
+        uint64_t nTxCoinAge;
+        if (GetCoinAge(nTxCoinAge, tx))
+            nCoinAge += nTxCoinAge;
+        else
+            return false;
+    }
+
+    if (nCoinAge == 0) // block coin age minimum 1 coin-day
+        nCoinAge = 1;
+
+    //if (fDebug && GetBoolArg("-printcoinage"))
+    //    printf("block coin age total nCoinDays=%" PRI64d "\n", nCoinAge);
+    return true;
+}
+
+// ppcoin: total coin age spent in transaction, in the unit of coin-days.
+// Only those coins meeting minimum age requirement counts. As those
+// transactions not in main chain are not currently indexed so we
+// might not find out about their coin age. Older transactions are 
+// guaranteed to be in main chain by sync-checkpoint. This rule is
+// introduced to help nodes establish a consistent view of the coin
+// age (trust score) of competing branches.
+bool GetCoinAge(uint64_t& nCoinAge, CTransactionRef tx) 
+{
+    arith_uint512 bnCentSecond = 0;  // coin age in the unit of cent-seconds
+    nCoinAge = 0;
+
+    if (tx->IsCoinBase())
+        return true;
+
+    //BOOST_FOREACH(const CTxIn& txin, vin)
+    for (const CTxIn& txin : tx->vin) {
+        // First try finding the previous transaction in database
+        CTransactionRef txPrev;
+        uint256 hashPrevBlock = uint256();
+
+        /*
+            if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), hashPrevBlock, true))
+            return error("CheckProofOfStake() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
+        */
+
+        // get input tx and block ref containing for block including input tx
+        if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), hashPrevBlock, true))
+            continue;  // previous transaction not in main chain
+
+        if (tx->nTime < txPrev->nTime)
+            return false;  // Transaction timestamp violation
+
+        // Read block header
+        CBlockIndex* pblockindex = mapBlockIndex[hashPrevBlock];
+        CBlock blockPrev;
+        CDiskBlockPos blockPos = pblockindex->GetBlockPos();
+
+        if (!ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()))
+            return false; // unable to read block of previous transaction
+
+        if (blockPrev.GetBlockTime() + Params().GetConsensus().nStakeMinAge > tx->nTime)
+            continue; // only count coins meeting min age requirement
+
+        int64_t nValueIn = txPrev->vout[txin.prevout.n].nValue;
+        bnCentSecond += arith_uint512(nValueIn) * (tx->nTime - txPrev->nTime) / CENT;
+
+        //if (gArgs.GetArg("-printcoinage", false))
+        //    printf("coin age nValueIn=%ld nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+    }
+
+    arith_uint512 bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
+    if (gArgs.GetArg("-printcoinage", false))
+        printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
+    nCoinAge = bnCoinDay.GetLow64();
+    return true;
+}
+
 // Check kernel hash target and coinstake signature
 bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& hashProofOfStake, std::vector<CScriptCheck> *pvChecks, bool fCHeckSignature)
 {
@@ -478,15 +557,14 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
     CBlock blockPrev;
     CDiskBlockPos blockPos = pblockindex->GetBlockPos();
 
-    if (ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()) == false)
+    if (!ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()))
         return error("CheckProofOfStake() : read block failed");
 
     int prevTxOffsetInBlock = blockPos.nPos + GetSerializeSize(CBlock(), SER_DISK, CLIENT_VERSION) - (2 * GetSizeOfCompactSize(0)) + GetSizeOfCompactSize(blockPrev.vtx.size());
-    for(int i=0; i< blockPrev.vtx.size(); i++)
-    {
-        if (blockPrev.vtx[i]->GetHash() == txPrev->GetHash())
+    for (auto& i : blockPrev.vtx) {
+        if (i->GetHash() == txPrev->GetHash())
             break;
-        prevTxOffsetInBlock += GetSerializeSize(blockPrev.vtx[i], SER_DISK, CLIENT_VERSION);
+        prevTxOffsetInBlock += GetSerializeSize(i, SER_DISK, CLIENT_VERSION);
     }
 
     if (!CheckStakeKernelHash(nBits, pblockindex, prevTxOffsetInBlock - blockPos.nPos, txPrev, txin.prevout, tx->nTime, hashProofOfStake))

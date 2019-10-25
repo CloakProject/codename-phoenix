@@ -90,7 +90,8 @@ public:
         consensus.nStakeMinAge = 60 * 60 * 1 * 1; // 1h, minimum age for coin age:  6h
         consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight:  4d 60*60*24*1
         consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
-        consensus.nStakeModierInterval = MODIFIER_INTERVAL;
+        consensus.nStakeModifierInterval = MODIFIER_INTERVAL;
+        consensus.nCoinbaseMaturity = 40;
 
         // Proof of work
         consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 20;
@@ -233,11 +234,12 @@ public:
 
         /* disable fallback fee on mainnet */
         m_fallback_fee_enabled = false;
+        fMiningRequiresPeers = true;
     }
 };
 
 /**
- * Testnet (v3)
+ * Testnet (v4)
  */
 class CTestNetParams : public CChainParams {
 public:
@@ -260,7 +262,8 @@ public:
         consensus.nStakeMinAge = 2 * 60; // test net min age is 2 min
         consensus.nStakeMaxAge = 6 * 60; // test net min age is 6 min
         consensus.nStakeTargetSpacing = 60; // 60 sec block spacing
-        consensus.nStakeModierInterval = 60;
+        consensus.nStakeModifierInterval = 60;
+        consensus.nCoinbaseMaturity = 10; // test maturity is 10 blocks
 
         // Proof of work
         consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 2;
@@ -285,11 +288,14 @@ public:
         // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000"); //1354312
 
-	pchMessageStart[0] = 0x28;
-        pchMessageStart[1] = 0x10;
-        pchMessageStart[2] = 0x76;
-        pchMessageStart[3] = 0x2B;
-        nDefaultPort = 29664;
+        unsigned int testnetNumber = 4;	//	hardcoded to testnet4 for now
+        unsigned char testNum = testnetNumber + 2;
+
+        pchMessageStart[0] = 0x22 + testNum;
+        pchMessageStart[1] = 0x0a + testNum;
+        pchMessageStart[2] = 0x70 + testNum;
+        pchMessageStart[3] = 0x25 + testNum;
+        nDefaultPort = 29665;
         nPruneAfterHeight = 1000;
 
         genesis = CreateGenesisBlock(1414697233, 1363324, 541065215, 1, 0);
@@ -336,6 +342,7 @@ public:
 
         /* enable fallback fee on testnet */
         m_fallback_fee_enabled = true;
+        fMiningRequiresPeers = true;
     }
 };
 
@@ -352,28 +359,42 @@ public:
         consensus.BIP34Hash = uint256();
         consensus.BIP65Height = 1351; // BIP65 activated on regtest (Used in rpc activation tests)
         consensus.BIP66Height = 1251; // BIP66 activated on regtest (Used in rpc activation tests)
-        consensus.nProofOfWorkLimit = UintToArith256(uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
-        consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
-        consensus.nPowTargetSpacing = 10 * 60;
-        consensus.fPowAllowMinDifficultyBlocks = true;
-        consensus.fPowNoRetargeting = true;
         consensus.nRuleChangeActivationThreshold = 108; // 75% for testchains
-        consensus.nMinerConfirmationWindow = 144; // Faster than normal for regtest (144 instead of 2016)
+        consensus.nMinerConfirmationWindow = 144;       // Faster than normal for regtest (144 instead of 2016)
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+
+		// Proof of stake
+        consensus.nProofOfStakeLimit = ~arith_uint256("0") >> 2;
+        consensus.nStakeMinAge = 2 * 60; // regtest min age is 2 min
+        consensus.nStakeMaxAge = 6 * 60; // regtest max age is 6 min
+        consensus.nStakeTargetSpacing = 60; // 60 sec block spacing
+        consensus.nStakeModifierInterval = 60;
+        consensus.nCoinbaseMaturity = 10; // regtest maturity is 10 blocks
+		
+		// Proof of work
+        consensus.nProofOfWorkLimit = UintToArith256(uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
+        consensus.nPowTargetTimespan = 60 * 30; // 30 blocks
+        consensus.nPowTargetSpacing = 3 * consensus.nStakeTargetSpacing;
+        consensus.fPowAllowMinDifficultyBlocks = true;
+        consensus.fPowNoRetargeting = true;
+
+		// Deployment of BIP68, BIP112, and BIP113.
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+
+		// Deployment of SegWit (BIP141, BIP143, and BIP147)
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x00");
+        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x00");
+        consensus.defaultAssumeValid = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000"); //1354312
 
         pchMessageStart[0] = 0xfa;
         pchMessageStart[1] = 0xbf;
@@ -384,9 +405,8 @@ public:
 
         genesis = CreateGenesisBlock(1296688602, 2, 0x207fffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"));
-        assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
-
+        assert(consensus.hashGenesisBlock == uint256S("0x2e4b4c8f25132141584245e7513fe4b9ea6b771ae4c654a1ab5186ebf1a789b2"));
+        assert(genesis.hashMerkleRoot == uint256S("0x1831d9f590f8b705ed996fcaa37ece517cfa6eb619af6738b2606383eab5a619"));
         vFixedSeeds.clear(); //!< Regtest mode doesn't have any fixed seeds.
         vSeeds.clear();      //!< Regtest mode doesn't have any DNS seeds.
 
@@ -396,7 +416,7 @@ public:
 
         checkpointData = {
             {
-                {0, uint256S("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206")},
+                {0, uint256S("2e4b4c8f25132141584245e7513fe4b9ea6b771ae4c654a1ab5186ebf1a789b2")},
             }
         };
                 
@@ -416,6 +436,7 @@ public:
 
         /* enable fallback fee on regtest */
         m_fallback_fee_enabled = true;
+        fMiningRequiresPeers = false;
     }
 };
 

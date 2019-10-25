@@ -14,6 +14,7 @@
 #include <boost/thread.hpp>
 #include <ctime>
 #include <tinyformat.h>
+#include <chrono>
 
 static std::atomic<int64_t> nMockTime(0); //!< For unit testing
 
@@ -25,6 +26,14 @@ int64_t GetTime()
     time_t now = time(nullptr);
     assert(now > 0);
     return now;
+}
+
+int64_t GetSteadyTime()
+{
+    auto now = std::chrono::steady_clock::now();
+    auto millisecs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+    assert(millisecs.count() > 0);
+    return millisecs.count();
 }
 
 void SetMockTime(int64_t nMockTimeIn)
