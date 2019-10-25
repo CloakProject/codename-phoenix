@@ -72,6 +72,8 @@ static const bool DEFAULT_PROXYRANDOMIZE = true;
 static const bool DEFAULT_REST_ENABLE = false;
 static const bool DEFAULT_STOPAFTERBLOCKIMPORT = false;
 
+unsigned int nMinerSleep;
+
 std::unique_ptr<CConnman> g_connman;
 std::unique_ptr<PeerLogicValidation> peerLogic;
 
@@ -1339,6 +1341,9 @@ bool AppInitMain()
         }
     }
 
+    // cloak: staker sleep MS
+    nMinerSleep = gArgs.GetArg("-minersleep", 500);
+
     // Check for host lookup allowed before parsing any network related parameters
     fNameLookup = gArgs.GetBoolArg("-dns", DEFAULT_NAME_LOOKUP);
 
@@ -1768,8 +1773,8 @@ bool AppInitMain()
 
 #if ENABLE_WALLET
     // Generate coins in the background
-    SetStaking(gArgs.GetBoolArg("-staking", true));
-    threadGroup.create_thread(boost::bind(&CloakStaker, boost::cref(chainparams)));
+    Staker::SetStaking(gArgs.GetBoolArg("-staking", true));
+    threadGroup.create_thread(boost::bind(&Staker::CloakStaker, boost::cref(chainparams)));
 #endif
 
     return true;

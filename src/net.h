@@ -319,6 +319,8 @@ public:
     */
     int64_t PoissonNextSendInbound(int64_t now, int average_interval_seconds);
 
+	bool HaveNodes();
+
 private:
     struct ListenSocket {
         SOCKET socket;
@@ -402,9 +404,9 @@ private:
     CCriticalSection cs_vOneShots;
     std::vector<std::string> vAddedNodes GUARDED_BY(cs_vAddedNodes);
     CCriticalSection cs_vAddedNodes;
-    std::vector<CNode*> vNodes;
+	mutable std::vector<CNode*> vNodes;
     std::list<CNode*> vNodesDisconnected;
-    mutable CCriticalSection cs_vNodes;
+	mutable CCriticalSection cs_vNodes;
     std::atomic<NodeId> nLastNodeId;
 
     /** Services this instance offers */
@@ -446,6 +448,7 @@ private:
     std::atomic<int64_t> m_next_send_inv_to_incoming{0};
 
     friend struct CConnmanTest;
+	friend class Staker;
 };
 extern std::unique_ptr<CConnman> g_connman;
 void Discover();

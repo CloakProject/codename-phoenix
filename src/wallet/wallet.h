@@ -339,6 +339,8 @@ public:
     std::string strFromAccount;
     int64_t nOrderPos; //!< position in ordered transaction list
     std::multimap<int64_t, std::pair<CWalletTx*, CAccountingEntry*>>::const_iterator m_it_wtxOrdered;
+    std::vector<char> vfEnigmaReserved; // which outputs are reserved for Enigma usage
+
 
     // memory only
     mutable bool fDebitCached;
@@ -490,6 +492,15 @@ public:
 
     /** Pass this transaction to the mempool. Fails if absolute fee exceeds absurd fee. */
     bool AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state);
+
+    bool IsEnigmaReserved(unsigned int nOut) const
+    {
+	if (nOut >= this->tx->vout.size())
+		throw std::runtime_error("CWalletTx::IsEnigmaReserved() : nOut out of range");
+	if (nOut >= vfEnigmaReserved.size())
+		return false;
+	return (vfEnigmaReserved[nOut]);
+    }
 
     std::set<uint256> GetConflicts() const;
 };
@@ -854,12 +865,13 @@ public:
      * Find non-change parent output.
      */
     const CTxOut& FindNonChangeParentOutput(const CTransaction& tx, int output) const;
-
+    
     /**
      * Shuffle and select coins until nTargetValue is reached while avoiding
      * small change; This method is stochastic for some inputs and upon
      * completion the coin set and corresponding actual target value is
-     * assembled
+     * assembled.
+     * CInputCoin based return.
      */
     bool SelectCoinsMinConf(const CAmount& nTargetValue, const CoinEligibilityFilter& eligibility_filter, std::vector<OutputGroup> groups,
         std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const;
@@ -1073,6 +1085,8 @@ public:
     const std::string& GetLabelName(const CScript& scriptPubKey) const;
 
     void GetScriptForMining(std::shared_ptr<CReserveScript> &script);
+    
+    void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result);
 
     void SignBlock(CBlock* pblock, bool &result);
 
