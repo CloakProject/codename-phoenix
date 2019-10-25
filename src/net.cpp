@@ -3058,7 +3058,7 @@ int64_t CConnman::PoissonNextSendInbound(int64_t now, int average_interval_secon
 
 bool CConnman::HaveNodes() {
     LOCK(g_connman->cs_vNodes);
-    return g_connman->vNodes.empty();
+    return !g_connman->vNodes.empty();
 }
 
 int64_t PoissonNextSend(int64_t now, int average_interval_seconds)
