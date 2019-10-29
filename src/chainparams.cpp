@@ -222,7 +222,9 @@ public:
             }
         };
 
-        // todo: check and set correctly!
+        // TODO: check and set correctly! Only relevant to estimate verification progress...
+        /** Guess verification progress (as a fraction between 0.0=genesis and 1.0=current tip).
+        // double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex* pindex) */
         chainTxData = ChainTxData{
             // Data from rpc: getchaintxstats 4096 0000000000000000002e63058c023a9a1de233554f28c7b21380b6c9003f36a8
             /* nTime    */ 1532884444,
