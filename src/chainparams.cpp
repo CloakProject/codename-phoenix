@@ -156,20 +156,18 @@ public:
         vSeeds.emplace_back("173.212.243.180");
         vSeeds.emplace_back("213.136.75.147");
 
-		/*
-        PUBKEY_ADDRESS = 27,  // CloakCoin: address begin with 'C'
-        SCRIPT_ADDRESS = 85, 
-        PUBKEY_ADDRESS_TEST = 111,
-        SCRIPT_ADDRESS_TEST = 196,
-		*/
-
-        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,27);
+        //  0x1B... encodes as 'B' or 'C' Cloak public address start
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,27);  
+        //  0x55..
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,85);
-        base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 176); // TODO: check if value should be changed
-        base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x88, 0xB2, 0x1E}; // TODO: check if value should be changed
-        base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x88, 0xAD, 0xE4}; // TODO: check if value should be changed
+        // 128 + PUBKEY_ADDRESS (0x9B... encodes as '6' Cloak private key start)
+        base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 155); 
+        // BIP-32 pubkeys start with 'xpub' (Bitcoin defaults); HD extended public key
+        base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x88, 0xB2, 0x1E};
+        // BIP-32 prvkeys start with 'xprv' (Bitcoin defaults); HD extended private key
+        base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x88, 0xAD, 0xE4};
 
-        bech32_hrp = "cc";
+        bech32_hrp = "cc";  //  human readable part; placeholder; not using SegWit so not really important
 
         vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_main, pnSeed6_main + ARRAYLEN(pnSeed6_main));
 
