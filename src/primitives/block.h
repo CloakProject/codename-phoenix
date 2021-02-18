@@ -21,6 +21,7 @@ class CBlockHeader
 {
 public:
     // header
+    static const int32_t CURRENT_VERSION = 4;
     int32_t nVersion;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
@@ -64,6 +65,8 @@ class CBlock : public CBlockHeader
 public:
     // network and disk
     std::vector<CTransactionRef> vtx;
+	std::vector<unsigned char> vchBlockSig;
+
 
     // memory only
     mutable bool fChecked;
@@ -83,6 +86,8 @@ public:
     {
         READWRITEAS(CBlockHeader, obj);
         READWRITE(obj.vtx);
+        READWRITE(vchBlockSig);
+
     }
 
     void SetNull()
@@ -105,6 +110,17 @@ public:
     }
 
     std::string ToString() const;
+
+	bool IsProofOfStake() const
+    {
+        return (vtx.size() > 1 && vtx[1]->IsCoinStake());
+    }
+
+    bool IsProofOfWork() const
+    {
+        return !IsProofOfStake();
+    }
+
 };
 
 /** Describes a place in the block chain to another node such that if the
