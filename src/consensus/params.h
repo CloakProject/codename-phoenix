@@ -83,6 +83,12 @@ struct Params {
     uint256 nMinimumChainWork;
     /** By default assume that the signatures in ancestors of this block are valid */
     uint256 defaultAssumeValid;
+	
+    // proof of stake
+    uint256 posLimit;
+    unsigned int nStakeMinAge;
+    unsigned int nStakeMaxAge;
+    unsigned int nStakeTargetSpacing;     
 
     /**
      * If true, witness commitments contain a payload equal to a Bitcoin Script solution
