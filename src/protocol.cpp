@@ -38,6 +38,7 @@ const char *SENDCMPCT="sendcmpct";
 const char *CMPCTBLOCK="cmpctblock";
 const char *GETBLOCKTXN="getblocktxn";
 const char *BLOCKTXN="blocktxn";
+const char* ENG_ANNOUNCEMENT = "announcement";
 const char *GETCFILTERS="getcfilters";
 const char *CFILTER="cfilter";
 const char *GETCFHEADERS="getcfheaders";
@@ -85,6 +86,7 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::GETCFCHECKPT,
     NetMsgType::CFCHECKPT,
     NetMsgType::WTXIDRELAY,
+    NetMsgType::ENG_ANNOUNCEMENT,
 };
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes, allNetMessageTypes+ARRAYLEN(allNetMessageTypes));
 
