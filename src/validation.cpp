@@ -3212,6 +3212,12 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block)
 
     setDirtyBlockIndex.insert(pindexNew);
 
+	if (pindexNew->IsProofOfStake()) {
+        if (!mapProofOfStake.count(hash))
+            error("AddToBlockIndex() : hashProofOfStake not found in map");
+        pindexNew->hashProofOfStake = UintToArith256(mapProofOfStake[hash]);
+    }
+
     return pindexNew;
 }
 
@@ -3353,6 +3359,11 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
 
     if (block.fChecked)
         return true;
+
+    if (block.IsProofOfWork())
+        if (!CheckBlockHeader(block, state, consensusParams, false))
+            if (!CheckBlockHeader(block, state, consensusParams, false))
+                return false;
 
     // Check that the header is valid (particularly PoW).  This is mostly
     // redundant with the call in AcceptBlockHeader.
@@ -4156,6 +4167,12 @@ bool BlockManager::LoadBlockIndex(
             pindex->BuildSkip();
         if (pindex->IsValid(BLOCK_VALID_TREE) && (pindexBestHeader == nullptr || CBlockIndexWorkComparator()(pindexBestHeader, pindex)))
             pindexBestHeader = pindex;
+
+		// ppcoin: calculate stake modifier checksum
+        pindex->nStakeModifierChecksum = GetStakeModifierChecksum(pindex);
+        if (!CheckStakeModifierCheckpoints(pindex->nHeight, pindex->nStakeModifierChecksum))
+            return error("CChainState::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016x", pindex->nHeight, pindex->nStakeModifier);
+
     }
 
     return true;
@@ -4660,6 +4677,8 @@ bool CChainState::LoadGenesisBlock(const CChainParams& chainparams)
 
     try {
         const CBlock& block = chainparams.GenesisBlock();
+        CBlockIndex* pindex = AddToBlockIndex(block);
+
         FlatFilePos blockPos = SaveBlockToDisk(block, 0, chainparams, nullptr);
         if (blockPos.IsNull())
             return error("%s: writing genesis block to disk failed", __func__);
