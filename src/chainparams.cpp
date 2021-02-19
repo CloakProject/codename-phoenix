@@ -82,6 +82,12 @@ public:
         consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks	        consensus.nPowTargetTimespan = 3.5 * 24 * 60 * 60; // 3.5 days
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.nPowTargetSpacing = 2.5 * 60;
+        consensus.nProofOfStakeLimit = ~arith_uint256("0") >> 2;
+        consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 20;
+        consensus.nPowTargetTimespan = 3.5 * 24 * 60 * 60; // 3.5 days
+        consensus.nPowTargetSpacing = 2.5 * 60;
+        consensus.fPowAllowMinDifficultyBlocks = true;
+        consensus.fPowNoRetargeting = false;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 6048; // 75% of 8064
@@ -305,6 +311,12 @@ public:
 
 		consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
         consensus.defaultAssumeValid = uint256S("0x000000000000006433d1efec504c53ca332b64963c425395515b01977bd7b3b0"); // 1864000
+
+		consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 2;
+        consensus.nPowTargetTimespan = 60 * 30; // 30 blocks
+        consensus.nPowTargetSpacing = 3 * consensus.nStakeTargetSpacing;
+        consensus.fPowAllowMinDifficultyBlocks = false;
+        consensus.fPowNoRetargeting = false;
 
         pchMessageStart[0] = 0x27;
         pchMessageStart[1] = 0xF0;
