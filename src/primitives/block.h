@@ -49,8 +49,16 @@ public:
     bool IsNull() const
     {
         return (nBits == 0);
-    }
 
+    }
+    // ppcoin: entropy bit for stake modifier if chosen by modifier
+    unsigned int GetStakeEntropyBit(unsigned int nHeight) const
+    {
+        // Take last bit of block hash as entropy bit
+        unsigned int nEntropyBit = ((GetHash().GetUint64(0)) & 1llu);
+        printf("GetStakeEntropyBit: nHeight=%u hashBlock=%s nEntropyBit=%u\n", nHeight, GetHash().ToString().c_str(), nEntropyBit);
+        return nEntropyBit;
+    }
     uint256 GetHash() const;
 
     int64_t GetBlockTime() const
@@ -113,9 +121,14 @@ public:
 
 	bool IsProofOfStake() const
     {
-        return (vtx.size() > 1 && vtx[1]->IsCoinStake());
+        bool res = (vtx.size() > 1 && vtx[1]->IsCoinStake());
+        return res;
+        
     }
-
+    std::pair<COutPoint, unsigned int> GetProofOfStake() const
+    {
+        return IsProofOfStake() ? std::make_pair(vtx[1]->vin[0].prevout, vtx[1]->nTime) : std::make_pair(COutPoint(), (unsigned int)0);
+    }
     bool IsProofOfWork() const
     {
         return !IsProofOfStake();

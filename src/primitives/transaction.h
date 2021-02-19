@@ -342,8 +342,11 @@ public:
 
     bool IsCoinStake() const
     {
+        bool res = (vin.size() > 0 && (!vin[0].prevout.IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
+        return res;
+
         // ppcoin: the coin stake transaction is marked with the first output empty
-        return (vin.size() > 0 && (!vin[0].prevout.IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
+
     }
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
