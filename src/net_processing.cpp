@@ -1825,6 +1825,8 @@ void PeerManager::ProcessHeadersMessage(CNode& pfrom, const std::vector<CBlockHe
             // we can use this peer to download.
             UpdateBlockAvailability(pfrom.GetId(), headers.back().GetHash());
 
+		
+
             if (nodestate->nUnconnectingHeaders % MAX_UNCONNECTING_HEADERS == 0) {
                 Misbehaving(pfrom.GetId(), 20, strprintf("%d non-connecting headers", nodestate->nUnconnectingHeaders));
             }
@@ -3362,6 +3364,8 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             // compact blocks with less work than our tip, it is safe to treat
             // reconstructed compact blocks as having been requested.
             m_chainman.ProcessNewBlock(m_chainparams, pblock, /*fForceProcessing=*/true, &fNewBlock);
+            std::string bhhh = pblock->GetHash().GetHex();
+
             if (fNewBlock) {
                 pfrom.nLastBlockTime = GetTime();
             } else {
