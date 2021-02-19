@@ -125,7 +125,8 @@ static bool SelectBlockFromCandidates(
         uint256 hashProof = pindex->IsProofOfStake() ? ArithToUint256(pindex->hashProofOfStake) : pindex->GetBlockHash();
         std::string strHashProof = hashProof.GetHex();
         CDataStream ss(SER_GETHASH, 0);
-        ss << hashProof << nStakeModifierPrev;        
+        ss << hashProof << nStakeModifierPrev;   
+		arith_uint256 hashChecksum = UintToArith256(Hash(ss.begin(), ss.end()));
         arith_uint256 hashSelection = UintToArith256(Hash(ss.begin(), ss.end()));
         std::string strHashSelection = hashSelection.GetHex();
         // the selection hash is divided by 2**32 so that proof-of-stake block
