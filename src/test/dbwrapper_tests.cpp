@@ -349,6 +349,9 @@ struct StringContentsSerializer {
                 s >> c;
                 str.push_back(c);
             } catch (const std::ios_base::failure&) {
+                std::cout << "Caught an ios_base::failure.\n"
+                          << "Explanatory string: " << e.what() << '\n'
+                          << "Error code: " << e.code() << '\n';
                 break;
             }
         }

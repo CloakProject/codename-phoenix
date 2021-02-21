@@ -127,6 +127,8 @@ BOOST_AUTO_TEST_CASE(caddrdb_read)
         ssPeers1 >> pchMsgTmp;
         ssPeers1 >> addrman1;
     } catch (const std::exception&) {
+        std::cout << "Caught an exception.\n"
+                  << "Explanatory string: " << e.what() << '\n';
         exceptionThrown = true;
     }
 
@@ -158,6 +160,8 @@ BOOST_AUTO_TEST_CASE(caddrdb_read_corrupted)
         ssPeers1 >> pchMsgTmp;
         ssPeers1 >> addrman1;
     } catch (const std::exception&) {
+        std::cout << "Caught an exception.\n"
+                  << "Explanatory string: " << e.what() << '\n';
         exceptionThrown = true;
     }
     // Even through de-serialization failed addrman is not left in a clean state.
