@@ -65,6 +65,9 @@ public:
     const Consensus::Params& GetConsensus() const { return consensus; }
     const CMessageHeader::MessageStartChars& MessageStart() const { return pchMessageStart; }
     int GetDefaultPort() const { return nDefaultPort; }
+    bool MiningRequiresPeers() const { return fMiningRequiresPeers; }
+
+	bool fMiningRequiresPeers;
 
     const CBlock& GenesisBlock() const { return genesis; }
     /** Default value for -checkmempool and -checkblockindex argument */

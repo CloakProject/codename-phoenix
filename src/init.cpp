@@ -90,6 +90,8 @@ static const bool DEFAULT_PROXYRANDOMIZE = true;
 static const bool DEFAULT_REST_ENABLE = false;
 static const bool DEFAULT_STOPAFTERBLOCKIMPORT = false;
 
+unsigned int nMinerSleep;
+
 #ifdef WIN32
 // Win32 LevelDB doesn't use filedescriptors, and the ones used for
 // accessing block files don't count towards the fd_set size limit
@@ -1264,6 +1266,8 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 {
     const ArgsManager& args = *Assert(node.args);
     const CChainParams& chainparams = Params();
+    nMinerSleep = gArgs.GetArg("-minersleep", 500);
+
     // ********************************************************* Step 4a: application initialization
     if (!CreatePidFile(args)) {
         // Detailed error printed inside CreatePidFile().

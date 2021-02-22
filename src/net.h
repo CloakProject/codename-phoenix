@@ -400,6 +400,7 @@ public:
         Variable intervals will result in privacy decrease.
     */
     int64_t PoissonNextSendInbound(int64_t now, int average_interval_seconds);
+    bool HaveNodes();
 
     void SetAsmap(std::vector<bool> asmap) { addrman.m_asmap = std::move(asmap); }
 

@@ -3046,6 +3046,12 @@ bool CConnman::ForNode(NodeId id, std::function<bool(CNode* pnode)> func)
     return found != nullptr && NodeFullyConnected(found) && func(found);
 }
 
+bool CConnman::HaveNodes()
+{
+    LOCK(g_connman->cs_vNodes);
+    return g_connman->vNodes.empty();
+}
+
 int64_t CConnman::PoissonNextSendInbound(int64_t now, int average_interval_seconds)
 {
     if (m_next_send_inv_to_incoming < now) {

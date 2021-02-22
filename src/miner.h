@@ -56,6 +56,16 @@ struct CTxMemPoolModifiedEntry {
     int64_t nSigOpCostWithAncestors;
 };
 
+class Staker
+{
+public:
+    void static CloakStaker(const CChainParams& chainparams);
+    void static SetStaking(bool mode);
+    bool static GetStaking();
+
+private:
+};
+
 /** Comparator for CTxMemPool::txiter objects.
  *  It simply compares the internal memory address of the CTxMemPoolEntry object
  *  pointed to. This means it has no meaning, and is only useful for using them

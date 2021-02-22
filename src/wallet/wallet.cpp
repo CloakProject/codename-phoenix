@@ -144,6 +144,9 @@ std::shared_ptr<CWallet> GetWallet(const std::string& name)
     }
     return nullptr;
 }
+void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool& result)
+{
+}
 
 std::unique_ptr<interfaces::Handler> HandleLoadWallet(LoadWalletFn load_wallet)
 {

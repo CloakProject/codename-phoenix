@@ -145,6 +145,7 @@ BOOST_AUTO_TEST_CASE(caddrdb_read)
 }
 
 
+
 BOOST_AUTO_TEST_CASE(caddrdb_read_corrupted)
 {
     CAddrManCorrupted addrmanCorrupted;
