@@ -32,6 +32,7 @@
 #include <util/translation.h>
 #include <wallet/coincontrol.h>
 #include <wallet/fees.h>
+#include <pow.h>
 
 #include <univalue.h>
 
@@ -146,6 +147,13 @@ std::shared_ptr<CWallet> GetWallet(const std::string& name)
 }
 void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool& result)
 {
+    // The following split & combine thresholds are important to security
+    // Should not be adjusted if you don't understand the consequences
+    static unsigned int nStakeSplitAge = (60 * 60 * 24 * 30);
+    const CBlockIndex* pIndex0 = GetLastBlockIndex(chainActive.Tip(), false);
+    int64_t nCombineThreshold = 0;
+    if (pIndex0->pprev)
+        nCombineThreshold = GetBlockSubsidy(pIndex0->nHeight, DEFAULT_BLOCK_MIN_TX_FEE) / 3;
 }
 
 std::unique_ptr<interfaces::Handler> HandleLoadWallet(LoadWalletFn load_wallet)

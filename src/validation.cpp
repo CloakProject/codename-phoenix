@@ -1168,6 +1168,7 @@ bool ReadRawBlockFromDisk(std::vector<uint8_t>& block, const CBlockIndex* pindex
 }
 
 CAmount GetBlockSubsidy(int nHeight, CAmount fees)
+
 {
     int64_t nSubsidy = 496 * COIN;
 
