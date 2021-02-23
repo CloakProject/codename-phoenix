@@ -560,7 +560,6 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
 
     if (!ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()))
         return error("CheckProofOfStake() : read block failed");
-
     int prevTxOffsetInBlock = blockPos.nPos + GetSerializeSize(CBlock(), SER_DISK, CLIENT_VERSION) - (2 * GetSizeOfCompactSize(0)) + GetSizeOfCompactSize(blockPrev.vtx.size());
     for (auto& i : blockPrev.vtx) {
         if (i->GetHash() == txPrev->GetHash())

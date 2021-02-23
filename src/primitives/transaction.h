@@ -88,6 +88,8 @@ public:
      * applied to extract that lock-time from the sequence field. */
     static const uint32_t SEQUENCE_LOCKTIME_MASK = 0x0000ffff;
 
+	 
+	void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool& result);
     /* In order to use the same number of bits to encode roughly the
      * same wall-clock duration, and because blocks are naturally
      * limited to occur every 600s on average, the minimum granularity
