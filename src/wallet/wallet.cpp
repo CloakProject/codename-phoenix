@@ -401,7 +401,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
     CScript scriptPubKeyKernel;
 
     for (const auto& entry : setCoins) {
-        uint256 hashPrevTx = entry.outpoint.hash;
+        uint256 hashPrevTx = entry.GetInputCoin().outpoint.hash;
         uint256 hashPrevBlock;
         CTransactionRef txPrev;
 
@@ -452,7 +452,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
                 std::vector<valtype> vSolutions;
                 txnouttype whichType;
                 CScript scriptPubKeyOut;
-                scriptPubKeyKernel = entry.txout.scriptPubKey;
+                scriptPubKeyKernel = entry.GetInputCoin().txout.scriptPubKey;
                 if (!Solver(scriptPubKeyKernel, whichType, vSolutions)) {
                     if (gArgs.GetBoolArg("-printcoinstake", false))
                         printf("CreateCoinStake : failed to parse kernel\n");
@@ -483,7 +483,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
                 mtx.nTime -= n;
                 mtx.vin.push_back(CTxIn(hashPrevTx, prevTxOffsetIndex));
-                nCredit += entry.txout.nValue;
+                nCredit += entry.GetInputCoin().txout.nValue;
 
                 // printf(">> Wallet: CreateCoinStake: nCredit = %"PRI64d"\n", nCredit);
 
@@ -508,11 +508,11 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
     }
 
     for (const auto& entry : setCoins) {
-        uint256 hashPrevTx = entry.outpoint.hash;
+        uint256 hashPrevTx = entry.GetInputCoin().outpoint.hash;
 
         // Attempt to add more inputs
         // Only add coins of the same key/address as kernel
-        if (mtx.vout.size() == 2 && ((entry.txout.scriptPubKey == scriptPubKeyKernel || entry.txout.scriptPubKey == mtx.vout[1].scriptPubKey)) && entry.outpoint.hash != mtx.vin[0].prevout.hash) {
+        if (mtx.vout.size() == 2 && ((entry.GetInputCoin().txout.scriptPubKey == scriptPubKeyKernel || entry.GetInputCoin().txout.scriptPubKey == mtx.vout[1].scriptPubKey)) && entry.GetInputCoin().outpoint.hash != mtx.vin[0].prevout.hash) {
             // Stop adding more inputs if already too many inputs
             if (mtx.vin.size() >= 100)
                 break;
@@ -520,10 +520,10 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
             if (nCredit > nCombineThreshold)
                 break;
             // Stop adding inputs if reached reserve limit
-            if (nCredit + entry.txout.nValue > nBalance - nReserveBalance)
+            if (nCredit + entry.GetInputCoin().txout.nValue > nBalance - nReserveBalance)
                 break;
             // Do not add additional significant input
-            if (entry.txout.nValue > nCombineThreshold)
+            if (entry.GetInputCoin().txout.nValue > nCombineThreshold)
                 continue;
             // Do not add input that is still too young
             if (pcoin.first->nTime + nStakeMaxAge > mtx.nTime)
