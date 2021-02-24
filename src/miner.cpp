@@ -49,7 +49,7 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
     int64_t nSearchTime = txCoinStake.nTime; // search to current time
     if (nSearchTime > nLastCoinStakeSearchTime) {
         bool gotCoinStake = false;
-		GetMainSignals().CreateCoinStake(pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, &txCoinStake, gotCoinStake);
+        GetMainSignals().CreateCoinStake(pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, &txCoinStake, gotCoinStake);
         if (gotCoinStake) {
             if (txCoinStake.nTime >= std::max(pindexPrev->GetMedianTimePast() + 1, pindexPrev->GetBlockTime() - GetMaxClockDrift(pindexPrev->nHeight + 1))) { // make sure coinstake would meet timestamp protocol
                 // as it would be the same as the block timestamp

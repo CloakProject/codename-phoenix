@@ -496,7 +496,7 @@ bool GetCoinAge(uint64_t& nCoinAge, CTransactionRef tx)
         CDiskBlockPos blockPos = pblockindex->GetBlockPos();
 
         if (!ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()))
-            return false; // unable to read block of previous transaction
+            return error("CheckProofOfStake() : read block failed");
 
         if (blockPrev.GetBlockTime() + Params().GetConsensus().nStakeMinAge > tx->nTime)
             continue; // only count coins meeting min age requirement
