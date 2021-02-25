@@ -63,7 +63,7 @@ struct {
 
 static const size_t TOTAL_TRIES = 100000;
 
-bool SelectCoinsBnB(std::vector<OutputGroup>& utxo_pool, const CAmount& target_value, const CAmount& cost_of_change, std::set<COutput>& out_set, CAmount& value_ret, CAmount not_input_fees)
+bool SelectCoinsBnB(std::vector<OutputGroup>& utxo_pool, const CAmount& target_value, const CAmount& cost_of_change, std::set<CInputCoin>& out_set, CAmount& value_ret, CAmount not_input_fees)
 {
     out_set.clear();
     CAmount curr_value = 0;
@@ -217,17 +217,17 @@ static void ApproximateBestSubset(const std::vector<OutputGroup>& groups, const 
     }
 }
 
-bool KnapsackSolver(const CAmount& nTargetValue, std::vector<OutputGroup>& groups, std::set<COutput>& setCoinsRet, CAmount& nValueRet)
+bool KnapsackSolverStaking(const CAmount& nTargetValue, std::vector<OutputGroup>& groups, std::set<COutput>& setCoinsRet, CAmount& nValueRet)
 {
     setCoinsRet.clear();
     nValueRet = 0;
 
     // List of values less than target
-    Optional<OutputGroup> lowest_larger;
+    boost::optional<OutputGroup> lowest_larger;
     std::vector<OutputGroup> applicable_groups;
     CAmount nTotalLower = 0;
 
-    Shuffle(groups.begin(), groups.end(), FastRandomContext());
+    random_shuffle(groups.begin(), groups.end(), GetRandInt);
 
     for (const OutputGroup& group : groups) {
         if (group.m_value == nTargetValue) {
@@ -291,7 +291,6 @@ bool KnapsackSolver(const CAmount& nTargetValue, std::vector<OutputGroup>& group
             LogPrint(BCLog::SELECTCOINS, "total %s\n", FormatMoney(nBest));
         }
     }
-
     return true;
 }
 

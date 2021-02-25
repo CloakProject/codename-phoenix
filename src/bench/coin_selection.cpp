@@ -52,7 +52,7 @@ static void CoinSelection(benchmark::Bench& bench)
     const CoinEligibilityFilter filter_standard(1, 6, 0);
     const CoinSelectionParams coin_selection_params(true, 34, 148, CFeeRate(0), 0);
     bench.run([&] {
-        std::set<COutput> setCoinsRet;
+        std::set<CInputCoin> setCoinsRet;
         CAmount nValueRet;
         bool bnb_used;
         bool success = wallet.SelectCoinsMinConf(1003 * COIN, filter_standard, groups, setCoinsRet, nValueRet, coin_selection_params, bnb_used);
@@ -62,7 +62,7 @@ static void CoinSelection(benchmark::Bench& bench)
     });
 }
 
-typedef std::set<COutput> CoinSet;
+typedef std::set<CInputCoin> CoinSet;
 static NodeContext testNode;
 static auto testChain = interfaces::MakeChain(testNode);
 static CWallet testWallet(testChain.get(), "", CreateDummyWalletDatabase());

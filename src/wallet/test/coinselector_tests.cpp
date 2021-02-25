@@ -24,9 +24,9 @@ BOOST_FIXTURE_TEST_SUITE(coinselector_tests, WalletTestingSetup)
 // we repeat those tests this many times and only complain if all iterations of the test fail
 #define RANDOM_REPEATS 5
 
-typedef std::set<COutput> CoinSet;
+typedef std::set<CInputCoin> CoinSet;
 
-static std::vector<COutput> vCoins;
+static std::vector<CInputCoin> vCoins;
 static NodeContext testNode;
 static auto testChain = interfaces::MakeChain(testNode);
 static CWallet testWallet(testChain.get(), "", CreateDummyWalletDatabase());
@@ -42,11 +42,7 @@ static void add_coin(const CAmount& nValue, int nInput, std::vector<CInputCoin>&
     CMutableTransaction tx;
     tx.vout.resize(nInput + 1);
     tx.vout[nInput].nValue = nValue;
-    std::unique_ptr<CWalletTx> wtx(new CWalletTx(&testWallet, MakeTransactionRef(std::move(tx))));
-
-    //COutput output(wtx.get(), nInput, 6 * 24, true /* spendable */, true /* solvable */, true /* safe */);
-
-    set.emplace(wtx.get(), nInput, 6 * 24, true /* spendable */, true /* solvable */, true /* safe */);
+    set.emplace(MakeTransactionRef(tx), nInput);
 }
 
 static void add_coin(const CAmount& nValue, int nInput, CoinSet& set)
@@ -122,7 +118,7 @@ inline std::vector<OutputGroup>& GroupCoins(const std::vector<CInputCoin>& coins
     return static_groups;
 }
 
-inline std::vector<OutputGroup>& GroupCoins(const std::vector<COutput>& coins)
+inline std::vector<OutputGroup>& GroupCoins(const std::vector<CInputCoin>& coins)
 {
     static std::vector<OutputGroup> static_groups;
     static_groups.clear();
@@ -297,7 +293,7 @@ BOOST_AUTO_TEST_CASE(bnb_search_test)
         add_coin(*wallet, 2 * CENT, 6 * 24, false, 0, true);
         CCoinControl coin_control;
         coin_control.fAllowOtherInputs = true;
-        coin_control.Select(COutPoint(vCoins.at(0).tx->GetHash(), vCoins.at(0).i));
+        coin_control.Select(CInputCoin(vCoins.at(0).tx->GetHash(), vCoins.at(0).i));
         coin_selection_params_bnb.effective_fee = CFeeRate(0);
         BOOST_CHECK(wallet->SelectCoins(vCoins, 10 * CENT, setCoinsRet, nValueRet, coin_control, coin_selection_params_bnb, bnb_used));
         BOOST_CHECK(bnb_used);
