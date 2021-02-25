@@ -318,6 +318,15 @@ public:
      * CWallet::ComputeTimeSmart().
      */
     unsigned int nTimeSmart;
+
+	bool IsEnigmaReserved(unsigned int nOut) const
+    {
+        if (nOut >= this->tx->vout.size())
+            throw std::runtime_error("CWalletTx::IsEnigmaReserved() : nOut out of range");
+        if (nOut >= vfEnigmaReserved.size())
+            return false;
+        return (!!vfEnigmaReserved[nOut]);
+    }
     /**
      * From me flag is set to 1 for transactions that were created by the wallet
      * on this bitcoin node, and set to 0 for transactions that were created
@@ -325,7 +334,8 @@ public:
      */
     bool fFromMe;
     int64_t nOrderPos; //!< position in ordered transaction list
-    std::multimap<int64_t, CWalletTx*>::const_iterator m_it_wtxOrdered;
+    std::multimap<int64_t, std::pair<CWalletTx*, CAccountingEntry*>>::const_iterator m_it_wtxOrdered;
+    std::vector<char> vfEnigmaReserved; // which outputs are reserved for Enigma usage
 
     // memory only
     enum AmountType { DEBIT, CREDIT, IMMATURE_CREDIT, AVAILABLE_CREDIT, AMOUNTTYPE_ENUM_ELEMENTS };

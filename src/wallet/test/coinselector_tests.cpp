@@ -24,7 +24,7 @@ BOOST_FIXTURE_TEST_SUITE(coinselector_tests, WalletTestingSetup)
 // we repeat those tests this many times and only complain if all iterations of the test fail
 #define RANDOM_REPEATS 5
 
-typedef std::set<CInputCoin> CoinSet;
+typedef std::set<COutput> CoinSet;
 
 static std::vector<COutput> vCoins;
 static NodeContext testNode;
@@ -42,7 +42,11 @@ static void add_coin(const CAmount& nValue, int nInput, std::vector<CInputCoin>&
     CMutableTransaction tx;
     tx.vout.resize(nInput + 1);
     tx.vout[nInput].nValue = nValue;
-    set.emplace_back(MakeTransactionRef(tx), nInput);
+    std::unique_ptr<CWalletTx> wtx(new CWalletTx(&testWallet, MakeTransactionRef(std::move(tx))));
+
+    //COutput output(wtx.get(), nInput, 6 * 24, true /* spendable */, true /* solvable */, true /* safe */);
+
+    set.emplace(wtx.get(), nInput, 6 * 24, true /* spendable */, true /* solvable */, true /* safe */);
 }
 
 static void add_coin(const CAmount& nValue, int nInput, CoinSet& set)
