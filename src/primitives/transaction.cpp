@@ -83,6 +83,71 @@ CTransaction::CTransaction() : vin(), vout(), nVersion(CTransaction::CURRENT_VER
 CTransaction::CTransaction(const CMutableTransaction& tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nLockTime(tx.nLockTime), nTime(tx.nTime), hash{ComputeHash()}, m_witness_hash{ComputeWitnessHash()} {}
 CTransaction::CTransaction(CMutableTransaction&& tx) : vin(std::move(tx.vin)), vout(std::move(tx.vout)), nVersion(tx.nVersion), nLockTime(tx.nLockTime), nTime(tx.nTime), hash{ComputeHash()}, m_witness_hash{ComputeWitnessHash()} {}
 
+// ppcoin: total coin age spent in transaction, in the unit of coin-days.
+// Only those coins meeting minimum age requirement counts. As those
+// transactions not in main chain are not currently indexed so we
+// might not find out about their coin age. Older transactions are
+// guaranteed to be in main chain by sync-checkpoint. This rule is
+// introduced to help nodes establish a consistent view of the coin
+// age (trust score) of competing branches.
+bool CTransaction::GetCoinAge(CTxDB& txdb, uint64& nCoinAge) const
+{
+    CBigNum bnCentSecond = 0; // coin age in the unit of cent-seconds
+    nCoinAge = 0;
+
+    if (IsCoinBase())
+        return true;
+
+    BOOST_FOREACH (const CTxIn& txin, vin) {
+        // First try finding the previous transaction in database
+        CTransaction txPrev;
+        CTxIndex txindex;
+        if (!txPrev.ReadFromDisk(txdb, txin.prevout, txindex))
+            continue; // previous transaction not in main chain
+        if (nTime < txPrev.nTime)
+            return false; // Transaction timestamp violation
+
+        // Read block header
+        CBlock block;
+        if (!block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false))
+            return false; // unable to read block of previous transaction
+        if (block.GetBlockTime() + nStakeMinAge > nTime)
+            continue; // only count coins meeting min age requirement
+
+        int64 nValueIn = txPrev.vout[txin.prevout.n].nValue;
+        bnCentSecond += CBigNum(nValueIn) * (nTime - txPrev.nTime) / CENT;
+
+        if (fDebug && GetBoolArg("-printcoinage"))
+            printf("coin age nValueIn=%" PRI64d " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+    }
+
+    CBigNum bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
+    if (fDebug && GetBoolArg("-printcoinage"))
+        printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
+    nCoinAge = bnCoinDay.getuint64();
+    return true;
+}
+
+// ppcoin: total coin age spent in block, in the unit of coin-days.
+bool CBlock::GetCoinAge(uint64& nCoinAge) const
+{
+    nCoinAge = 0;
+
+    CTxDB txdb("r");
+    BOOST_FOREACH (const CTransaction& tx, vtx) {
+        uint64 nTxCoinAge;
+        if (tx.GetCoinAge(txdb, nTxCoinAge))
+            nCoinAge += nTxCoinAge;
+        else
+            return false;
+    }
+
+    if (nCoinAge == 0) // block coin age minimum 1 coin-day
+        nCoinAge = 1;
+    if (fDebug && GetBoolArg("-printcoinage"))
+        printf("block coin age total nCoinDays=%" PRI64d "\n", nCoinAge);
+    return true;
+}
 
 CAmount CTransaction::GetValueOut() const
 {
@@ -95,10 +160,76 @@ CAmount CTransaction::GetValueOut() const
     assert(MoneyRange(nValueOut));
     return nValueOut;
 }
+// ppcoin: total coin age spent in transaction, in the unit of coin-days.
+// Only those coins meeting minimum age requirement counts. As those
+// transactions not in main chain are not currently indexed so we
+// might not find out about their coin age. Older transactions are
+// guaranteed to be in main chain by sync-checkpoint. This rule is
+// introduced to help nodes establish a consistent view of the coin
+// age (trust score) of competing branches.
+bool CTransaction::GetCoinAge(CTxDB& txdb, uint64& nCoinAge) const
+{
+    CBigNum bnCentSecond = 0; // coin age in the unit of cent-seconds
+    nCoinAge = 0;
+
+    if (IsCoinBase())
+        return true;
+
+    BOOST_FOREACH (const CTxIn& txin, vin) {
+        // First try finding the previous transaction in database
+        CTransaction txPrev;
+        CTxIndex txindex;
+        if (!txPrev.ReadFromDisk(txdb, txin.prevout, txindex))
+            continue; // previous transaction not in main chain
+        if (nTime < txPrev.nTime)
+            return false; // Transaction timestamp violation
+
+        // Read block header
+        CBlock block;
+        if (!block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false))
+            return false; // unable to read block of previous transaction
+        if (block.GetBlockTime() + nStakeMinAge > nTime)
+            continue; // only count coins meeting min age requirement
+
+        int64 nValueIn = txPrev.vout[txin.prevout.n].nValue;
+        bnCentSecond += CBigNum(nValueIn) * (nTime - txPrev.nTime) / CENT;
+
+        if (fDebug && GetBoolArg("-printcoinage"))
+            printf("coin age nValueIn=%" PRI64d " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+    }
+
+    CBigNum bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
+    if (fDebug && GetBoolArg("-printcoinage"))
+        printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
+    nCoinAge = bnCoinDay.getuint64();
+    return true;
+}
+
+// ppcoin: total coin age spent in block, in the unit of coin-days.
+bool CBlock::GetCoinAge(uint64& nCoinAge) const
+{
+    nCoinAge = 0;
+
+    CTxDB txdb("r");
+    BOOST_FOREACH (const CTransaction& tx, vtx) {
+        uint64 nTxCoinAge;
+        if (tx.GetCoinAge(txdb, nTxCoinAge))
+            nCoinAge += nTxCoinAge;
+        else
+            return false;
+    }
+
+    if (nCoinAge == 0) // block coin age minimum 1 coin-day
+        nCoinAge = 1;
+    if (fDebug && GetBoolArg("-printcoinage"))
+        printf("block coin age total nCoinDays=%" PRI64d "\n", nCoinAge);
+    return true;
+}
 
 unsigned int CTransaction::GetTotalSize() const
 {
     return ::GetSerializeSize(*this, PROTOCOL_VERSION);
+
 }
 
 std::string CTransaction::ToString() const
