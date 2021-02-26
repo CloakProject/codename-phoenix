@@ -97,59 +97,6 @@ static void UpdateWalletSetting(interfaces::Chain& chain,
     }
 }
 
-bool CWallet::SelectCoinsMinConfStaking(const CAmount& nTargetValue, const CoinEligibilityFilter& eligibility_filter, std::vector<OutputGroup> groups, std::set<COutput>& setCoinsRet, CAmount& nValueRet, const CoinSelectionParams& coin_selection_params, bool& bnb_used) const
-{
-    setCoinsRet.clear();
-    nValueRet = 0;
-
-    std::vector<OutputGroup> utxo_pool;
-    if (coin_selection_params.use_bnb) {
-        // Get long term estimate
-        FeeCalculation feeCalc;
-        CCoinControl temp;
-        temp.m_confirm_target = 1008;
-        CFeeRate long_term_feerate = GetMinimumFeeRate(*this, temp, ::mempool, ::feeEstimator, &feeCalc);
-
-        // Calculate cost of change
-        CAmount cost_of_change = GetDiscardRate(*this, ::feeEstimator).GetFee(coin_selection_params.change_spend_size) + coin_selection_params.effective_fee.GetFee(coin_selection_params.change_output_size);
-
-        // Filter by the min conf specs and add to utxo_pool and calculate effective value
-        for (OutputGroup& group : groups) {
-            if (!group.EligibleForSpending(eligibility_filter)) continue;
-
-            group.fee = 0;
-            group.long_term_fee = 0;
-            group.effective_value = 0;
-            for (auto it = group.m_outputs.begin(); it != group.m_outputs.end();) {
-                const CInputCoin& coin = *it;
-                CAmount effective_value = coin.txout.nValue - (coin.m_input_bytes < 0 ? 0 : coin_selection_params.effective_fee.GetFee(coin.m_input_bytes));
-                // Only include outputs that are positive effective value (i.e. not dust)
-                if (effective_value > 0) {
-                    group.fee += coin.m_input_bytes < 0 ? 0 : coin_selection_params.effective_fee.GetFee(coin.m_input_bytes);
-                    group.long_term_fee += coin.m_input_bytes < 0 ? 0 : long_term_feerate.GetFee(coin.m_input_bytes);
-                    group.effective_value += effective_value;
-                    ++it;
-                } else {
-                    it = group.Discard(coin);
-                }
-            }
-            if (group.effective_value > 0) utxo_pool.push_back(group);
-        }
-        // Calculate the fees for things that aren't inputs
-        CAmount not_input_fees = coin_selection_params.effective_fee.GetFee(coin_selection_params.tx_noinputs_size);
-        bnb_used = true;
-        return SelectCoinsBnB(utxo_pool, nTargetValue, cost_of_change, setCoinsRet, nValueRet, not_input_fees);
-    } else {
-        // Filter by the min conf specs and add to utxo_pool
-        for (const OutputGroup& group : groups) {
-            if (!group.EligibleForSpending(eligibility_filter)) continue;
-            utxo_pool.push_back(group);
-        }
-        bnb_used = false;
-        return KnapsackSolverStaking(nTargetValue, utxo_pool, setCoinsRet, nValueRet);
-    }
-}
-
 bool AddWallet(const std::shared_ptr<CWallet>& wallet)
 {
     LOCK(cs_wallets);
@@ -449,7 +396,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
     CScript scriptPubKeyKernel;
 
     for (const auto& entry : setCoins) {
-        uint256 hashPrevTx = entry.GetInputCoin().outpoint.hash;
+        uint256 hashPrevTx = entry.outpoint.hash;
         uint256 hashPrevBlock;
         CTransactionRef txPrev;
 
@@ -467,6 +414,17 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
         if (!ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus())) {
             result = false;
             error("CreateCoinStake() : read block failed");
+
+			// create matching COutput for [CInputCoin] entry
+            const CWalletTx* wtx = GetWalletTx(entry.outpoint.hash);
+            int outpointIndex = entry.outpoint.n;
+            bool mine = IsMine(wtx->tx->vout[outpointIndex]);
+            bool solvable = IsSolvable(*this, wtx->tx->vout[outpointIndex].scriptPubKey);
+            bool safeTx = false;
+            bool useMaxSig = false;
+            bool spendable = ((mine & ISMINE_SPENDABLE) != ISMINE_NO) || (((mine & ISMINE_WATCH_ONLY) != ISMINE_NO) && solvable);
+            //COutput entryOutput = COutput(wtx, outpointIndex, wtx->GetDepthInMainChain(), solvable, spendable, safeTx);
+
             return;
         }
 
@@ -500,7 +458,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
                 std::vector<valtype> vSolutions;
                 txnouttype whichType;
                 CScript scriptPubKeyOut;
-                scriptPubKeyKernel = entry.GetInputCoin().txout.scriptPubKey;
+                scriptPubKeyKernel = entry.txout.scriptPubKey;
                 if (!Solver(scriptPubKeyKernel, whichType, vSolutions)) {
                     if (gArgs.GetBoolArg("-printcoinstake", false))
                         printf("CreateCoinStake : failed to parse kernel\n");
@@ -531,11 +489,11 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
                 mtx.nTime -= n;
                 mtx.vin.push_back(CTxIn(hashPrevTx, prevTxOffsetIndex));
-                nCredit += entry.GetInputCoin().txout.nValue;
+                nCredit += entry.txout.nValue;
 
                 // printf(">> Wallet: CreateCoinStake: nCredit = %"PRI64d"\n", nCredit);
 
-                vwtxPrev.push_back(entry);
+                vwtxPrev.push_back(wtx);
                 mtx.vout.push_back(CTxOut(0, scriptPubKeyOut));
                 if (blockPrev.GetBlockTime() + nStakeSplitAge > mtx.nTime)
                     mtx.vout.push_back(CTxOut(0, scriptPubKeyOut)); //split stake
@@ -556,11 +514,14 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
     }
 
     for (const auto& entry : setCoins) {
-        uint256 hashPrevTx = entry.GetInputCoin().outpoint.hash;
+        uint256 hashPrevTx = entry.outpoint.hash;
+
+        // get wallet tx with output for our entry input
+        const CWalletTx* wtx = GetWalletTx(hashPrevTx);
 
         // Attempt to add more inputs
         // Only add coins of the same key/address as kernel
-        if (mtx.vout.size() == 2 && ((entry.GetInputCoin().txout.scriptPubKey == scriptPubKeyKernel || entry.GetInputCoin().txout.scriptPubKey == mtx.vout[1].scriptPubKey)) && entry.GetInputCoin().outpoint.hash != mtx.vin[0].prevout.hash) {
+        if (mtx.vout.size() == 2 && ((entry.txout.scriptPubKey == scriptPubKeyKernel || entry.txout.scriptPubKey == mtx.vout[1].scriptPubKey)) && entry.outpoint.hash != mtx.vin[0].prevout.hash)
             // Stop adding more inputs if already too many inputs
             if (mtx.vin.size() >= 100)
                 break;
@@ -568,21 +529,21 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
             if (nCredit > nCombineThreshold)
                 break;
             // Stop adding inputs if reached reserve limit
-            if (nCredit + entry.GetInputCoin().txout.nValue > nBalance - nReserveBalance)
+            if (nCredit + entry.txout.nValue > nBalance - nReserveBalance)
                 break;
             // Do not add additional significant input
-            if (entry.GetInputCoin().txout.nValue > nCombineThreshold)
+            if (entry.txout.nValue > nCombineThreshold)
                 continue;
             // Do not add input that is still too young
-            if (pcoin.first->nTime + nStakeMaxAge > mtx.nTime)
+            if (wtx->tx->nTime + Params().GetConsensus().nStakeMaxAge > mtx.nTime)
                 continue;
             // Do not add coins that are reserved for Enigma
-            if (pcoin.first->IsEnigmaReserved(pcoin.second))
+            if (wtx->IsEnigmaReserved(entry.outpoint.n))
                 continue;
 
-            mtx.vin.push_back(CTxIn(pcoin.first->GetHash(), pcoin.second));
-            nCredit += pcoin.first->vout[pcoin.second].nValue;
-            vwtxPrev.push_back(pcoin.first);
+			mtx.vin.push_back(CTxIn(entry.outpoint.hash, entry.outpoint.n));
+            nCredit += entry.txout.nValue;
+            vwtxPrev.push_back(wtx);
         }
     }
 
@@ -2852,7 +2813,7 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, const CoinEligibil
     }
 }
 
-bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const
+bool CWallet::SelectCoins(const std::vector<CInputCoin>& vAvailableCoins, const CAmount& nTargetValue, std::set<CInputCoin>& setCoinsRet, CAmount& nValueRet, const CCoinControl& coin_control, CoinSelectionParams& coin_selection_params, bool& bnb_used) const
 {
     std::vector<COutput> vCoins(vAvailableCoins);
     CAmount value_to_select = nTargetValue;
