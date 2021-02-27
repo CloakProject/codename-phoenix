@@ -78,7 +78,7 @@ public:
     /* If this flag set, CTxIn::nSequence is NOT interpreted as a
      * relative lock-time. */
     static const uint32_t SEQUENCE_LOCKTIME_DISABLE_FLAG = (1U << 31);
-    bool GetCoinAge(CTxDB& txdb, uint64& nCoinAge) const;
+    bool GetCoinAge(uint64_t& nCoinAge) const;
 
     /* If CTxIn::nSequence encodes a relative lock-time and this flag
      * is set, the relative lock-time has units of 512 seconds,

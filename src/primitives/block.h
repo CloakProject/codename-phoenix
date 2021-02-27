@@ -49,14 +49,12 @@ public:
     bool IsNull() const
     {
         return (nBits == 0);
-
     }
     // ppcoin: entropy bit for stake modifier if chosen by modifier
     unsigned int GetStakeEntropyBit(unsigned int nHeight) const
     {
         // Take last bit of block hash as entropy bit
         unsigned int nEntropyBit = ((GetHash().GetUint64(0)) & 1llu);
-        printf("GetStakeEntropyBit: nHeight=%u hashBlock=%s nEntropyBit=%u\n", nHeight, GetHash().ToString().c_str(), nEntropyBit);
         return nEntropyBit;
     }
     uint256 GetHash() const;
@@ -73,7 +71,7 @@ class CBlock : public CBlockHeader
 public:
     // network and disk
     std::vector<CTransactionRef> vtx;
-	std::vector<unsigned char> vchBlockSig;
+    std::vector<unsigned char> vchBlockSig;
 
 
     // memory only
@@ -84,18 +82,26 @@ public:
         SetNull();
     }
 
-    CBlock(const CBlockHeader &header)
+    CBlock(const CBlockHeader& header)
     {
         SetNull();
         *(static_cast<CBlockHeader*>(this)) = header;
     }
 
-    SERIALIZE_METHODS(CBlock, obj)
+    int64_t GetMaxTransactionTime() const
+    {
+        int64_t maxTransactionTime = 0;
+        for (const CTransactionRef& tx : vtx) {
+            maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx->nTime);
+			}
+        return maxTransactionTime;
+    }
+    
+	SERIALIZE_METHODS(CBlock, obj)
     {
         READWRITEAS(CBlockHeader, obj);
         READWRITE(obj.vtx);
         READWRITE(vchBlockSig);
-
     }
 
     void SetNull()
@@ -108,22 +114,21 @@ public:
     CBlockHeader GetBlockHeader() const
     {
         CBlockHeader block;
-        block.nVersion       = nVersion;
-        block.hashPrevBlock  = hashPrevBlock;
+        block.nVersion = nVersion;
+        block.hashPrevBlock = hashPrevBlock;
         block.hashMerkleRoot = hashMerkleRoot;
-        block.nTime          = nTime;
-        block.nBits          = nBits;
-        block.nNonce         = nNonce;
+        block.nTime = nTime;
+        block.nBits = nBits;
+        block.nNonce = nNonce;
         return block;
     }
 
     std::string ToString() const;
 
-	bool IsProofOfStake() const
+    bool IsProofOfStake() const
     {
         bool res = (vtx.size() > 1 && vtx[1]->IsCoinStake());
         return res;
-        
     }
     std::pair<COutPoint, unsigned int> GetProofOfStake() const
     {
@@ -133,15 +138,13 @@ public:
     {
         return !IsProofOfStake();
     }
-
 };
 
 /** Describes a place in the block chain to another node such that if the
  * other node doesn't have the same branch, it can find a recent common trunk.
  * The further back it is, the further before the fork it may be.
  */
-struct CBlockLocator
-{
+struct CBlockLocator {
     std::vector<uint256> vHave;
 
     CBlockLocator() {}

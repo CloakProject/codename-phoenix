@@ -8,6 +8,11 @@
 #include <hash.h>
 #include <tinyformat.h>
 #include <util/strencodings.h>
+#include <arith_uint256.h>
+#include <addrman.h>
+#include <primitives/block.h>
+#include <chainparams.h>
+#include <validation.h>
 
 #include <assert.h>
 
@@ -90,41 +95,40 @@ CTransaction::CTransaction(CMutableTransaction&& tx) : vin(std::move(tx.vin)), v
 // guaranteed to be in main chain by sync-checkpoint. This rule is
 // introduced to help nodes establish a consistent view of the coin
 // age (trust score) of competing branches.
-bool CTransaction::GetCoinAge(CTxDB& txdb, uint64& nCoinAge) const
+bool CTransaction::GetCoinAge(uint64_t& nCoinAge) const
 {
-    CBigNum bnCentSecond = 0; // coin age in the unit of cent-seconds
+    arith_uint512 bnCentSecond = 0; // coin age in the unit of cent-seconds
     nCoinAge = 0;
 
     if (IsCoinBase())
         return true;
 
-    BOOST_FOREACH (const CTxIn& txin, vin) {
-        // First try finding the previous transaction in database
-        CTransaction txPrev;
-        CTxIndex txindex;
-        if (!txPrev.ReadFromDisk(txdb, txin.prevout, txindex))
-            continue; // previous transaction not in main chain
-        if (nTime < txPrev.nTime)
+	for (const CTxIn& txin : vin) {
+        CTransactionRef txPrev;
+        uint256 hashPrevBlock = uint256();
+        if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), hashPrevBlock, true))
+            continue;
+        if (nTime < txPrev->nTime)
             return false; // Transaction timestamp violation
+        CBlockIndex* pblockindex = mapBlockIndex[hashPrevBlock];
+        CBlock blockPrev;
+        CDiskBlockPos blockPos = pblockindex->GetBlockPos();
 
-        // Read block header
-        CBlock block;
-        if (!block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false))
-            return false; // unable to read block of previous transaction
-        if (block.GetBlockTime() + nStakeMinAge > nTime)
-            continue; // only count coins meeting min age requirement
+		if (!ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()))
+            return false;
 
-        int64 nValueIn = txPrev.vout[txin.prevout.n].nValue;
-        bnCentSecond += CBigNum(nValueIn) * (nTime - txPrev.nTime) / CENT;
+		if (blockPrev.GetBlockTime() + Params().GetConsensus().nStakeMinAge > nTime)
+            return false;
 
-        if (fDebug && GetBoolArg("-printcoinage"))
-            printf("coin age nValueIn=%" PRI64d " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+		int64_t nValueIn = txPrev->vout[txin.prevout.n].nValue;
+
+		bnCentSecond += arith_uint512(nValueIn) * (nTime - txPrev->nTime) / CENT;
+        arith_uint512 bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
+        if (gArgs.GetArg("-printcoinage", false))
+            printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
+        nCoinAge = bnCoinDay.GetLow64();
+
     }
-
-    CBigNum bnCoinDay = bnCentSecond * CENT / COIN / (24 * 60 * 60);
-    if (fDebug && GetBoolArg("-printcoinage"))
-        printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
-    nCoinAge = bnCoinDay.getuint64();
     return true;
 }
 
