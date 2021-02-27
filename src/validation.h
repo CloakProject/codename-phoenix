@@ -187,7 +187,7 @@ double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex* pin
 
 /** Calculate the amount of disk space the block & undo files currently use */
 uint64_t CalculateCurrentUsage();
-
+int64_t GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits, unsigned int nTime, int nHeight);
 /**
  *  Actually unlink the specified files
  */
