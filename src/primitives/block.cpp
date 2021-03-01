@@ -19,7 +19,7 @@ uint256 CBlockHeader::GetHash() const
 bool CBlock::GetCoinAge(uint64_t& nCoinAge) const
 {
     nCoinAge = 0;
-    for (const CTransactionRef tx : vtx) {
+    for (const CTransactionRef& tx : vtx) {
         {
             uint64_t nTxCoinAge;
             if (tx->GetCoinAge(nTxCoinAge))
