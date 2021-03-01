@@ -33,7 +33,7 @@ public:
     {
         SetNull();
     }
-
+    bool GetCoinAge(uint64_t& nCoinAge) const;
     SERIALIZE_METHODS(CBlockHeader, obj) { READWRITE(obj.nVersion, obj.hashPrevBlock, obj.hashMerkleRoot, obj.nTime, obj.nBits, obj.nNonce); }
 
     void SetNull()
