@@ -1651,7 +1651,6 @@ uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn
         // Only lock-in the txout payee at same index as txin
         unsigned int nOut = nIn;
         if (nOut >= txTmp.vout.size()) {
-            LogPrintf("ERROR: SignatureHash() : nOut=%d out of range\n", nOut);
             return one;
         }
         txTmp.vout.resize(nOut + 1);

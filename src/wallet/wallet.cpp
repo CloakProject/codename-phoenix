@@ -551,7 +551,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
 
 	uint64_t nCoinAge;
 
-	if (!txNew->GetCoinAge(nCoinAge)) {
+	if (!GetCoinAgeTX(txNew, nCoinAge)) {
 		return;
 	}
 
