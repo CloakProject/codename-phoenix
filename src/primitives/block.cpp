@@ -4,7 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <primitives/block.h>
-#include <pos.h>
+
 #include <hash.h>
 #include <tinyformat.h>
 
@@ -16,6 +16,25 @@ uint256 CBlockHeader::GetHash() const
 }
 
 
+// ppcoin: total coin age spent in block, in the unit of coin-days.
+bool CBlock::GetCoinAge(uint64_t& nCoinAge) const
+{
+    nCoinAge = 0;
+    for (const CTransactionRef& tx : vtx) {
+        uint64_t nTxCoinAge;
+        if (tx->GetCoinAge(nTxCoinAge))
+            nCoinAge += nTxCoinAge;
+        else
+            return false;
+    }
+
+    if (nCoinAge == 0) // block coin age minimum 1 coin-day
+        nCoinAge = 1;
+
+    //if (fDebug && GetBoolArg("-printcoinage"))
+    //    printf("block coin age total nCoinDays=%" PRI64d "\n", nCoinAge);
+    return true;
+}
 
 std::string CBlock::ToString() const
 {

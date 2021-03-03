@@ -14,7 +14,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 {
     assert(pindexLast != nullptr);
     unsigned int nProofOfWorkLimit = UintToArith256(params.nProofOfWorkLimit).GetCompact();
-    assert("GetNextWorkRequired deprecated for Cloak- use GetNextTargetRequired");
+    assert(true && "GetNextWorkRequired deprecated for Cloak- use GetNextTargetRequired");
 
     // Only change once per difficulty adjustment interval
     if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval() != 0)
@@ -51,7 +51,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
 {
     if (params.fPowNoRetargeting)
         return pindexLast->nBits;
-    assert("CalculateNextWorkRequired deprecated for Cloak- use GetNextTargetRequired");
+    assert(true && "CalculateNextWorkRequired deprecated for Cloak- use GetNextTargetRequired");
 
     // Limit adjustment step
     int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;

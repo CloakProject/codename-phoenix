@@ -10,7 +10,6 @@
 class CBlockHeader;
 class CBlockIndex;
 class uint256;
-class CBlock;
 class CScriptCheck;
 
 // MODIFIER_INTERVAL: time to elapse before new modifier is computed
@@ -27,9 +26,6 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
 // Check kernel hash target and coinstake signature
 bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& hashProofOfStake, std::vector<CScriptCheck>* pvChecks = nullptr, bool fCHeckSignature = true);
 bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeModifier, bool& fGeneratedStakeModifier);
-bool GetCoinAgeBlock(const CBlock& block, uint64_t& nCoinAge);
-
-bool GetCoinAgeTX(const CTransactionRef& tx, uint64_t& nCoinAge);
 bool CheckStakeModifierCheckpoints(int nHeight, unsigned int nStakeModifierChecksum);
 
 unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex);
