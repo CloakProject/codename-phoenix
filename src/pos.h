@@ -27,6 +27,8 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
 bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& hashProofOfStake, std::vector<CScriptCheck>* pvChecks = nullptr, bool fCHeckSignature = true);
 bool ComputeNextStakeModifier(const CBlockIndex* pindexPrev, uint64_t& nStakeModifier, bool& fGeneratedStakeModifier);
 bool CheckStakeModifierCheckpoints(int nHeight, unsigned int nStakeModifierChecksum);
+bool GetCoinAgeBlock(uint64_t& nCoinAge, CBlock block);
+bool GetCoinAge(uint64_t& nCoinAge, CTransactionRef tx);
 
 unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex);
 
