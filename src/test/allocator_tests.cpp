@@ -132,7 +132,7 @@ BOOST_AUTO_TEST_CASE(arena_tests)
 class TestLockedPageAllocator: public LockedPageAllocator
 {
 public:
-    TestLockedPageAllocator(int count_in, int lockedcount_in): count(count_in), lockedcount(lockedcount_in) {}
+    TestLockedPageAllocator(int64_t	count_in, int lockedcount_in) : count(count_in), lockedcount(lockedcount_in) {}
     void* AllocateLocked(size_t len, bool *lockingSuccess) override
     {
         *lockingSuccess = false;
@@ -156,7 +156,7 @@ public:
         return std::numeric_limits<size_t>::max();
     }
 private:
-    int count;
+    int64_t count;
     int lockedcount;
 };
 

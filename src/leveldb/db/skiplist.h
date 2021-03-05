@@ -343,7 +343,7 @@ void SkipList<Key, Comparator>::Insert(const Key& key) {
   // Our data structure does not allow duplicate insertion
   assert(x == nullptr || !Equal(key, x->key));
 
-  int height = RandomHeight();
+  int64_t height = RandomHeight();
   if (height > GetMaxHeight()) {
     for (int i = GetMaxHeight(); i < height; i++) {
       prev[i] = head_;
