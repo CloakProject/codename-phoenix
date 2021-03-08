@@ -17,6 +17,7 @@ struct {
         return a.effective_value > b.effective_value;
     }
 } descending;
+class COutput;
 
 /*
  * This is the Branch and Bound Coin Selection algorithm designed by Murch. It searches for an input
@@ -60,6 +61,8 @@ struct {
  * @param CAmount not_input_fees -> The fees that need to be paid for the outputs and fixed size
  *        overhead (version, locktime, marker and flag)
  */
+// COutput output version
+bool SelectCoinsBnB(std::vector<OutputGroup>& utxo_pool, const CAmount& target_value, const CAmount& cost_of_change, std::set<COutput>& out_set, CAmount& value_ret, CAmount not_input_fees);
 
 static const size_t TOTAL_TRIES = 100000;
 

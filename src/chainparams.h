@@ -95,6 +95,8 @@ public:
     const CCheckpointData& Checkpoints() const { return checkpointData; }
     const ChainTxData& TxData() const { return chainTxData; }
     const arith_uint256& ProofOfWorkLimit() const { return consensus.nProofOfWorkLimit; }
+    bool MiningRequiresPeers() const { return fMiningRequiresPeers; }
+    bool fMiningRequiresPeers;
 
     // proof of stake
     const arith_uint256& ProofOfStakeLimit() const { return consensus.nProofOfStakeLimit; }

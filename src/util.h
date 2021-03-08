@@ -129,6 +129,17 @@ inline bool IsSwitchChar(char c)
 #define THREAD_PRIORITY_ABOVE_NORMAL    0
 #endif
 
+
+#if defined(__GNUC__) || defined(__clang__)
+#define DEPRECATED __attribute__((deprecated))
+#elif defined(_MSC_VER)
+#define DEPRECATED __declspec(deprecated)
+#else
+#pragma message("WARNING: You need to implement DEPRECATED for this compiler")
+#define DEPRECATED
+#endif
+
+
 void SetThreadPriority(int nPriority);
 
 enum class OptionsCategory {

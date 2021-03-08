@@ -33,6 +33,9 @@ private:
     struct ListEntry { std::shared_ptr<CValidationInterface> callbacks; int count = 1; };
     std::list<ListEntry> m_list GUARDED_BY(m_mutex);
     std::unordered_map<CValidationInterface*, std::list<ListEntry>::iterator> m_map GUARDED_BY(m_mutex);
+    boost::signals2::signal<void(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool& result)> CreateCoinStake;
+    g_signals.m_internals->CreateCoinStake.connect(boost::bind(&CValidationInterface::CreateCoinStake, pwalletIn, _1, _2, _3, _4));
+
 
 public:
     // We are not allowed to assume the scheduler only runs in one thread,
@@ -150,6 +153,17 @@ void UnregisterAllValidationInterfaces()
         return;
     }
     g_signals.m_internals->Clear();
+    g_signals.m_internals->CreateCoinStake.disconnect_all_slots();
+}
+
+void CMainSignals::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool& result)
+{
+    m_internals->CreateCoinStake(nBits, nSearchInterval, txNew, result);
+}
+
+void CMainSignals::SignBlock(CBlock* pblock, bool& result)
+{
+    m_internals->SignBlock(pblock, result);
 }
 
 void CallFunctionInValidationInterfaceQueue(std::function<void()> func)

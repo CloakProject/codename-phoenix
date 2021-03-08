@@ -194,6 +194,10 @@ public:
         CONNECTIONS_OUT = (1U << 1),
         CONNECTIONS_ALL = (CONNECTIONS_IN | CONNECTIONS_OUT),
     };
+    bool HaveNodes();
+    mutable std::vector<CNode*> vNodes;
+    mutable CCriticalSection cs_vNodes;
+    friend class Staker;
 
     struct Options
     {

@@ -202,6 +202,8 @@ public:
         fRequireStandard = true;
         m_is_test_chain = false;
         m_is_mockable_chain = false;
+        fMiningRequiresPeers = true;
+        fMiningRequiresPeers = true;
 
         checkpointData = {
             {

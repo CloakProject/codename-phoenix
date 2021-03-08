@@ -33,6 +33,16 @@ struct CBlockTemplate
     std::vector<unsigned char> vchCoinbaseCommitment;
 };
 
+class Staker
+{
+public:
+    void static CloakStaker(const CChainParams& chainparams);
+    void static SetStaking(bool mode);
+    bool static GetStaking();
+
+private:
+};
+
 // Container for tracking updates to ancestor feerate as we include (parent)
 // transactions in a block
 struct CTxMemPoolModifiedEntry {

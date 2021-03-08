@@ -128,6 +128,13 @@ uint16_t GetListenPort()
     return (uint16_t)(gArgs.GetArg("-port", Params().GetDefaultPort()));
 }
 
+bool CConnman::HaveNodes()
+{
+    LOCK(g_connman->cs_vNodes);
+    return g_connman->vNodes.empty();
+}
+
+
 // find 'best' local address for a particular peer
 bool GetLocal(CService& addr, const CNetAddr *paddrPeer)
 {

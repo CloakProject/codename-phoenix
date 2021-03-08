@@ -15,12 +15,12 @@
 #include <consensus/validation.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
-#include <net.h>
 #include <pow.h>
 #include <primitives/transaction.h>
 #include <timedata.h>
 #include <util/moneystr.h>
 #include <util/system.h>
+#include <net.h>
 
 #include <algorithm>
 #include <utility>
@@ -31,6 +31,9 @@ uint64_t nLastBlockWeight = 0;
 int64_t nLastCoinStakeSearchInterval = 0;
 uint64_t nLastSteadyTime = 0;
 uint64_t nLastTime = 0;
+extern unsigned int nMinerSleep;
+extern std::unique_ptr<CConnman> g_connman;
+
 
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
@@ -74,6 +77,17 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
 
     return nNewTime - nOldTime;
 }
+
+void Staker::SetStaking(bool mode)
+{
+    fStaking = mode;
+}
+
+bool Staker::GetStaking()
+{
+    return fStaking;
+}
+
 
 void Staker::CloakStaker(const CChainParams& chainparams)
 {
@@ -172,6 +186,27 @@ void Staker::CloakStaker(const CChainParams& chainparams)
                         } else {
                             MilliSleep(nMinerSleep);
                         }
+
+						pblock->nBits = GetNextTargetRequired(pindexPrev, true);
+                        CTransaction txCoinStake;
+                        int64_t nSearchTime = txCoinStake.nTime; // search to current time
+                        if (nSearchTime > nLastCoinStakeSearchTime) {
+                            bool gotCoinStake = false;
+                            GetMainSignals().CreateCoinStake(pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, MakeTransactionRef(txCoinStake), gotCoinStake);
+                            if (gotCoinStake) {
+                                if (txCoinStake.nTime >= std::max(pindexPrev->GetMedianTimePast() + 1, pindexPrev->GetBlockTime() - GetMaxClockDrift(pindexPrev->nHeight + 1))) { // make sure coinstake would meet timestamp protocol
+                                    // as it would be the same as the block timestamp
+                                    CMutableTransaction tx(*pblock->vtx[0]);
+                                    tx.vout[0].SetEmpty();
+                                    tx.nTime = txCoinStake.nTime;
+                                    pblock->vtx.clear();
+                                    pblock->vtx.push_back(MakeTransactionRef(CTransaction(tx)));
+                                }
+                            }
+                            nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
+                            nLastCoinStakeSearchTime = nSearchTime;
+                        }
+
 					}
 		}
 	}

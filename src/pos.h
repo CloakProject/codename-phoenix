@@ -4,6 +4,7 @@
 
 #include "consensus/params.h"
 #include "primitives/transaction.h"
+#include "primitives/block.h"
 
 #include <stdint.h>
 

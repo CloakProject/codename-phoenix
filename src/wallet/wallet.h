@@ -58,7 +58,8 @@ std::shared_ptr<CWallet> LoadWallet(interfaces::Chain& chain, const std::string&
 std::shared_ptr<CWallet> CreateWallet(interfaces::Chain& chain, const std::string& name, Optional<bool> load_on_start, DatabaseOptions& options, DatabaseStatus& status, bilingual_str& error, std::vector<bilingual_str>& warnings);
 std::unique_ptr<interfaces::Handler> HandleLoadWallet(LoadWalletFn load_wallet);
 std::unique_ptr<WalletDatabase> MakeWalletDatabase(const std::string& name, const DatabaseOptions& options, DatabaseStatus& status, bilingual_str& error);
-void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool& result);
+std::vector<char> vfEnigmaReserved; // which outputs are reserved for Enigma usage
+
 
 //! -paytxfee default
 constexpr CAmount DEFAULT_PAY_TX_FEE = 0;
@@ -259,6 +260,16 @@ public:
 
         s >> tx >> hashBlock >> vMerkleBranch >> nIndex;
     }
+
+	bool IsEnigmaReserved(unsigned int nOut) const
+    {
+        if (nOut >= this->tx->vout.size())
+            throw std::runtime_error("CWalletTx::IsEnigmaReserved() : nOut out of range");
+        if (nOut >= vfEnigmaReserved.size())
+            return false;
+        return (vfEnigmaReserved[nOut]);
+    }
+
 };
 
 //Get the marginal bytes of spending the specified output
@@ -635,7 +646,7 @@ class CWallet final : public WalletStorage, public interfaces::Chain::Notificati
 private:
     CKeyingMaterial vMasterKey GUARDED_BY(cs_wallet);
 
-
+	void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool& result);
     bool Unlock(const CKeyingMaterial& vMasterKeyIn, bool accept_no_keys = false);
 
     std::atomic<bool> fAbortRescan{false};
@@ -1330,7 +1341,6 @@ public:
 // NOTE: this requires that all inputs must be in mapWallet (eg the tx should
 // be IsAllFromMe).
 int64_t CalculateMaximumSignedTxSize(const CTransaction &tx, const CWallet *wallet, bool use_max_sig = false) EXCLUSIVE_LOCKS_REQUIRED(wallet->cs_wallet);
-int64_t CalculateMaximumSignedTxSize(const CTransaction &tx, const CWallet *wallet, const std::vector<CTxOut>& txouts, bool use_max_sig = false);
 
 //! Add wallet name to persistent configuration so it will be loaded on startup.
 bool AddWalletSetting(interfaces::Chain& chain, const std::string& wallet_name);

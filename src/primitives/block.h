@@ -93,11 +93,14 @@ public:
         int64_t maxTransactionTime = 0;
         for (const CTransactionRef& tx : vtx) {
             maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx->nTime);
-			}
+		}
         return maxTransactionTime;
-    }
-    
-	SERIALIZE_METHODS(CBlock, obj)
+
+	}
+    bool GetCoinAge(uint64_t& nCoinAge) const;
+
+
+    SERIALIZE_METHODS(CBlock, obj)
     {
         READWRITEAS(CBlockHeader, obj);
         READWRITE(obj.vtx);

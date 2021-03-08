@@ -38,6 +38,7 @@ void UnregisterAllValidationInterfaces();
 void RegisterSharedValidationInterface(std::shared_ptr<CValidationInterface> callbacks);
 /** Unregister subscriber */
 void UnregisterSharedValidationInterface(std::shared_ptr<CValidationInterface> callbacks);
+virtual void CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool& result) {}
 
 /**
  * Pushes a function to callback onto the notification queue, guaranteeing any

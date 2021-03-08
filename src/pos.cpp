@@ -579,3 +579,26 @@ bool GetCoinAge(uint64_t& nCoinAge, CTransactionRef tx)
     nCoinAge = bnCoinDay.GetLow64();
     return true;
 }
+
+
+
+// ppcoin: total coin age spent in block, in the unit of coin-days.
+bool GetCoinAgeBlock(uint64_t& nCoinAge, CBlock block)
+{
+    nCoinAge = 0;
+    for (const CTransactionRef& tx : block.vtx) {
+        uint64_t nTxCoinAge;
+        if (GetCoinAge(nTxCoinAge, tx))
+            nCoinAge += nTxCoinAge;
+        else
+            return false;
+    }
+
+    if (nCoinAge == 0) // block coin age minimum 1 coin-day
+        nCoinAge = 1;
+
+    //if (fDebug && GetBoolArg("-printcoinage"))
+    //    printf("block coin age total nCoinDays=%" PRI64d "\n", nCoinAge);
+    return true;
+}
+

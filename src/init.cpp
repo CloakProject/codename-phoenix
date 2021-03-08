@@ -89,7 +89,6 @@ static bool fFeeEstimatesInitialized = false;
 static const bool DEFAULT_PROXYRANDOMIZE = true;
 static const bool DEFAULT_REST_ENABLE = false;
 static const bool DEFAULT_STOPAFTERBLOCKIMPORT = false;
-
 unsigned int nMinerSleep;
 
 #ifdef WIN32
@@ -1363,6 +1362,13 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
 #if ENABLE_ZMQ
     RegisterZMQRPCCommands(tableRPC);
 #endif
+
+	#if ENABLE_WALLET
+    // Generate coins in the background
+		Staker::SetStaking(gArgs.GetBoolArg("-staking", true));
+		threadGroup.create_thread(boost::bind(&Staker::CloakStaker, boost::cref(chainparams)));
+	#endif
+
 
     /* Start the RPC server already.  It will be started in "warmup" mode
      * and not really process calls already (but it will signify connections
