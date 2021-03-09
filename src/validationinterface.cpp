@@ -34,6 +34,10 @@ private:
     std::list<ListEntry> m_list GUARDED_BY(m_mutex);
     std::unordered_map<CValidationInterface*, std::list<ListEntry>::iterator> m_map GUARDED_BY(m_mutex);
     boost::signals2::signal<void(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool& result)> CreateCoinStake;
+    boost::signals2::signal<void(const CBlockIndex*, const std::shared_ptr<const CBlock>&)> NewPoWValidBlock;
+    boost::signals2::signal<void(std::shared_ptr<CReserveScript>&)> GetScriptForMining;
+    boost::signals2::signal<void(CBlock* pblock, bool& result)> SignBlock;
+
     g_signals.m_internals->CreateCoinStake.connect(boost::bind(&CValidationInterface::CreateCoinStake, pwalletIn, _1, _2, _3, _4));
 
 

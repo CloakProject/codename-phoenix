@@ -39,6 +39,11 @@ public:
     void static CloakStaker(const CChainParams& chainparams);
     void static SetStaking(bool mode);
     bool static GetStaking();
+    bool HaveNodes();
+    mutable std::vector<CNode*> vNodes;
+    mutable CCriticalSection cs_vNodes;
+
+	friend class Staker;
 
 private:
 };

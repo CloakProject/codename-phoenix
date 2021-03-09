@@ -28,14 +28,6 @@ int64_t GetTime()
     return now;
 }
 
-int64_t GetSteadyTime()
-{
-    auto now = std::chrono::steady_clock::now();
-    auto millisecs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
-    assert(millisecs.count() > 0);
-    return millisecs.count();
-}
-
 void SetMockTime(int64_t nMockTimeIn)
 {
     nMockTime.store(nMockTimeIn, std::memory_order_relaxed);
@@ -76,6 +68,15 @@ std::string DateTimeStrFormat(const char* pszFormat, int64_t nTime)
     ss << boost::posix_time::from_time_t(nTime);
     return ss.str();
 }
+
+int64_t GetSteadyTime()
+{
+    auto now = std::chrono::steady_clock::now();
+    auto millisecs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch());
+    assert(millisecs.count() > 0);
+    return millisecs.count();
+}
+
 
 void MilliSleep(int64_t n)
 {

@@ -34,7 +34,6 @@ uint64_t nLastTime = 0;
 extern unsigned int nMinerSleep;
 extern std::unique_ptr<CConnman> g_connman;
 
-
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
     int64_t nOldTime = pblock->nTime;
@@ -99,115 +98,83 @@ void Staker::CloakStaker(const CChainParams& chainparams)
 
 		unsigned int nExtraNonce = 0;
 		while (true) {
-                    if (chainparams.MiningRequiresPeers() && IsInitialBlockDownload()) {
-                        // Busy-wait for the network to come online so we don't waste time mining
-                        // on an obsolete chain. In regtest mode we expect to fly solo.
-                        do {
-                            if (g_connman->HaveNodes() == false && !IsInitialBlockDownload())
-                                break;
-                            nLastCoinStakeSearchInterval = 0;
-                            MilliSleep(1000);
-                        } while (true);
-                    }
+            if (chainparams.MiningRequiresPeers() && IsInitialBlockDownload()) {
+                // Busy-wait for the network to come online so we don't waste time mining
+                // on an obsolete chain. In regtest mode we expect to fly solo.
+                do {
+                    if (g_connman->HaveNodes() == false && !IsInitialBlockDownload())
+                        break;
+                    nLastCoinStakeSearchInterval = 0;
+                    MilliSleep(1000);
+                } while (true);
+            }
 
-                    while (!fStaking) {
-                        MilliSleep(1000);
-                    }
-
-
-                    /*
-            while (pwalletMain->IsLocked())
-            {
-                nLastCoinStakeSearchInterval = 0;
+            while (!fStaking) {
                 MilliSleep(1000);
             }
-            */
+            nLastTime = GetTimeMillis();
+            nLastSteadyTime = GetSteadyTime();
 
-                    /*
-            if (nLastTime != 0 && nLastSteadyTime != 0)
-            {
-                int64_t nClockDifference = GetTimeMillis() - nLastTime;
-                int64_t nSteadyClockDifference = GetSteadyTime() - nLastSteadyTime;
-                if (abs64(nClockDifference - nSteadyClockDifference) > 1000)
-                {
-                    fIncorrectTime = true;
-                    LogPrintf("*** System clock change detected. Staking will be paused until the clock is synced again.\n");
-                }
-                if (fIncorrectTime) {
-                    if (!NtpClockSync()) {
-                        MilliSleep(10000);
-                        continue;
-                    }
-                    else {
-                        fIncorrectTime = false;
-                        LogPrintf("*** Starting staking thread again.\n");
-                    }
-                }
+            //
+            // Create new block
+            //
+            uint64_t nFees = 0;
+
+            std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, &nFees));
+            if (!pblocktemplate.get()) {
+                LogPrintf("Error in NavCoinStaker: Keypool ran out, please call keypoolrefill before restarting the staking thread\n");
+                return;
             }
-            */
-                    nLastTime = GetTimeMillis();
-                    nLastSteadyTime = GetSteadyTime();
+            CBlock* pblock = &pblocktemplate->block;
 
-                    //
-                    // Create new block
-                    //
-                    uint64_t nFees = 0;
+            //LogPrint("coinstake","Running NavCoinStaker with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
+            //     ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
 
-                    std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, &nFees));
-                    if (!pblocktemplate.get()) {
-                        LogPrintf("Error in NavCoinStaker: Keypool ran out, please call keypoolrefill before restarting the staking thread\n");
-                        return;
+            // ppcoin: if proof-of-stake block found then process block
+            if (pblock->IsProofOfStake()) {
+                CBlockIndex* pindexPrev = chainActive.Tip();
+                IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
+
+                // cloak - sign the block
+                bool signedOk = false;
+                GetMainSignals().SignBlock(pblock, signedOk);
+                if (signedOk) {
+                    LogPrintf("coinstake", "PoS Block signed\n");
+                    SetThreadPriority(THREAD_PRIORITY_NORMAL);
+
+                    // cloak: test block validity outside of CreateNewBlock so that mroot is set and block is signed
+                    CValidationState state;
+                    if (!TestBlockValidity(state, Params(), *pblock, pindexPrev, true, true, true)) {
+                        throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
                     }
-                    CBlock* pblock = &pblocktemplate->block;
 
-                    //LogPrint("coinstake","Running NavCoinStaker with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
-                    //     ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
+                    SetThreadPriority(THREAD_PRIORITY_LOWEST);
+                    MilliSleep(500);
+                } else {
+                    MilliSleep(nMinerSleep);
+                }
 
-                    // ppcoin: if proof-of-stake block found then process block
-                    if (pblock->IsProofOfStake()) {
-                        CBlockIndex* pindexPrev = chainActive.Tip();
-                        IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
-
-                        // cloak - sign the block
-                        bool signedOk = false;
-                        GetMainSignals().SignBlock(pblock, signedOk);
-                        if (signedOk) {
-                            LogPrintf("coinstake", "PoS Block signed\n");
-                            SetThreadPriority(THREAD_PRIORITY_NORMAL);
-
-                            // cloak: test block validity outside of CreateNewBlock so that mroot is set and block is signed
-                            CValidationState state;
-                            if (!TestBlockValidity(state, Params(), *pblock, pindexPrev, true, true, true)) {
-                                throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
-                            }
-
-                            SetThreadPriority(THREAD_PRIORITY_LOWEST);
-                            MilliSleep(500);
-                        } else {
-                            MilliSleep(nMinerSleep);
+				pblock->nBits = GetNextTargetRequired(pindexPrev, true);
+                CTransaction txCoinStake;
+                int64_t nSearchTime = txCoinStake.nTime; // search to current time
+                if (nSearchTime > nLastCoinStakeSearchTime) {
+                    bool gotCoinStake = false;
+                    GetMainSignals().CreateCoinStake(pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, MakeTransactionRef(txCoinStake), gotCoinStake);
+                    if (gotCoinStake) {
+                        if (txCoinStake.nTime >= std::max(pindexPrev->GetMedianTimePast() + 1, pindexPrev->GetBlockTime() - GetMaxClockDrift(pindexPrev->nHeight + 1))) { // make sure coinstake would meet timestamp protocol
+                            // as it would be the same as the block timestamp
+                            CMutableTransaction tx(*pblock->vtx[0]);
+                            tx.vout[0].SetEmpty();
+                            tx.nTime = txCoinStake.nTime;
+                            pblock->vtx.clear();
+                            pblock->vtx.push_back(MakeTransactionRef(CTransaction(tx)));
                         }
+                    }
+                    nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
+                    nLastCoinStakeSearchTime = nSearchTime;
+                }
 
-						pblock->nBits = GetNextTargetRequired(pindexPrev, true);
-                        CTransaction txCoinStake;
-                        int64_t nSearchTime = txCoinStake.nTime; // search to current time
-                        if (nSearchTime > nLastCoinStakeSearchTime) {
-                            bool gotCoinStake = false;
-                            GetMainSignals().CreateCoinStake(pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, MakeTransactionRef(txCoinStake), gotCoinStake);
-                            if (gotCoinStake) {
-                                if (txCoinStake.nTime >= std::max(pindexPrev->GetMedianTimePast() + 1, pindexPrev->GetBlockTime() - GetMaxClockDrift(pindexPrev->nHeight + 1))) { // make sure coinstake would meet timestamp protocol
-                                    // as it would be the same as the block timestamp
-                                    CMutableTransaction tx(*pblock->vtx[0]);
-                                    tx.vout[0].SetEmpty();
-                                    tx.nTime = txCoinStake.nTime;
-                                    pblock->vtx.clear();
-                                    pblock->vtx.push_back(MakeTransactionRef(CTransaction(tx)));
-                                }
-                            }
-                            nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
-                            nLastCoinStakeSearchTime = nSearchTime;
-                        }
-
-					}
+			}
 		}
 	}
 }

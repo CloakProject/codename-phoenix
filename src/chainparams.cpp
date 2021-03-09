@@ -203,7 +203,7 @@ public:
         m_is_test_chain = false;
         m_is_mockable_chain = false;
         fMiningRequiresPeers = true;
-        fMiningRequiresPeers = true;
+        m_fallback_fee_enabled = false;
 
         checkpointData = {
             {
@@ -327,6 +327,8 @@ public:
         nPruneAfterHeight = 1000;
         m_assumed_blockchain_size = 40;
         m_assumed_chain_state_size = 2;
+        fMiningRequiresPeers = true;
+        m_fallback_fee_enabled = false;
 
         genesis = CreateGenesisBlock(1436293363, 1363323, 541065215, 1, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
@@ -387,6 +389,8 @@ public:
             vSeeds.emplace_back("2a01:7c8:d005:390::5");
             vSeeds.emplace_back("v7ajjeirttkbnt32wpy3c6w3emwnfr3fkla7hpxcfokr3ysd3kqtzmqd.onion:38333");
             fMiningRequiresPeers = true;
+            m_fallback_fee_enabled = false;
+
             consensus.nMinimumChainWork = uint256S("0x00000000000000000000000000000000000000000000000000000019fd16269a");
             consensus.defaultAssumeValid = uint256S("0x0000002a1de0f46379358c1fd09906f7ac59adf3712323ed90eb59e4c183c020"); // 9434
             m_assumed_blockchain_size = 1;
@@ -404,6 +408,8 @@ public:
             }
             bin = ParseHex(signet_challenge[0]);
             fMiningRequiresPeers = true;
+            m_fallback_fee_enabled = false;
+
             consensus.nMinimumChainWork = uint256{};
             consensus.defaultAssumeValid = uint256{};
             m_assumed_blockchain_size = 0;
@@ -484,7 +490,7 @@ public:
         fRequireStandard = true;
         m_is_test_chain = true;
         m_is_mockable_chain = false;
-
+        m_fallback_fee_enabled = true;
 		fMiningRequiresPeers = false;
     }
 };
