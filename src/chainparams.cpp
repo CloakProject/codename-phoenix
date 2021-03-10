@@ -82,16 +82,8 @@ public:
         consensus.nPowTargetSpacing = 10 * 60;
         consensus.nPowTargetSpacing = 2.5 * 60;
         consensus.nProofOfStakeLimit = ~arith_uint256("0") >> 2;
-        consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 20;
-        consensus.nPowTargetTimespan = 3.5 * 24 * 60 * 60; // 3.5 days
-        consensus.nPowTargetSpacing = 2.5 * 60;
-        consensus.fPowAllowMinDifficultyBlocks = true;
-        consensus.fPowNoRetargeting = false;
-        consensus.fPowAllowMinDifficultyBlocks = false;
-        consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 6048; // 75% of 8064
-        consensus.nMinerConfirmationWindow = 2016;       // nPowTargetTimespan / nPowTargetSpacing	        
-		consensus.nMinerConfirmationWindow = 8064; // nPowTargetTimespan / nPowTargetSpacing * 4
+		consensus.nMinerConfirmationWindow = 144; 
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008	        
         consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999;   // December 31, 2008	   
@@ -102,11 +94,24 @@ public:
         consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight:  4d 60*60*24*1
         consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
 
-         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
+		consensus.nProofOfStakeLimit = ~arith_uint256("0") >> 2;
+        consensus.nStakeMinAge = 2 * 60;    // regtest min age is 2 min
+        consensus.nStakeMaxAge = 6 * 60;    // regtest min age is 6 min
+        consensus.nStakeTargetSpacing = 60; // 60 sec block spacing
+        consensus.nStakeModifierInterval = 60;
+        consensus.nCoinbaseMaturity = 10; // regtest maturity is 10 blocks
+
+        // Proof of work
+        consensus.nProofOfWorkLimit = UintToArith256(uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"));
+        consensus.nPowTargetTimespan = 60 * 30; // 30 blocks
+        consensus.nPowTargetSpacing = 3 * consensus.nStakeTargetSpacing;
+        consensus.fPowAllowMinDifficultyBlocks = true;
+        consensus.fPowNoRetargeting = true;
+
+		consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1462060800; // May 1st, 2016
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1493596800;   // May 1st, 2017		
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1809129600;   // May 1st, 2027
-
 
         // Deployment of SegWit (BIP141, BIP143, and BIP147)	        // Deployment of SegWit (BIP141, BIP143, and BIP147)
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
@@ -114,15 +119,11 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 1479168000; // November 15th, 2016.	        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 1794700800000; // November 15th, 2026.
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1510704000;   // November 15th, 2017.	        consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 1826236800;      // November 15th, 2027.
 
-
         // The best chain should have at least this much work.	        // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000028822fef1c230963535a90d"); //consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000028822fef1c230963535a90d");
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000"); // TODO: [rzr] check this value as it should probably correspond to the actual work of the last checkpointed block
 
-
         // By default assume that the signatures in ancestors of this block are valid.	        // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x0000000000000000002e63058c023a9a1de233554f28c7b21380b6c9003f36a8"); //534292	        consensus.defaultAssumeValid = uint256S("0x00000000001bd0502781789a5e148136fb6e071576e5ed4764186db7e474accb "); // 1000
-
+        consensus.defaultAssumeValid = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000);
 
         /**	        /**
          * The message start string is designed to be unlikely to occur in normal data.	         * The message start string is designed to be unlikely to occur in normal data.

@@ -98,11 +98,14 @@ void Staker::CloakStaker(const CChainParams& chainparams)
 
 		unsigned int nExtraNonce = 0;
 		while (true) {
+            if (!coinbaseScript || coinbaseScript->reserveScript.empty())
+                throw std::runtime_error("No coinbase script available (staking requires a wallet)");
+
             if (chainparams.MiningRequiresPeers() && IsInitialBlockDownload()) {
                 // Busy-wait for the network to come online so we don't waste time mining
                 // on an obsolete chain. In regtest mode we expect to fly solo.
                 do {
-                    if (g_connman->HaveNodes() == false && !IsInitialBlockDownload())
+                    if (g_connman->HaveNodes() == true && !IsInitialBlockDownload())
                         break;
                     nLastCoinStakeSearchInterval = 0;
                     MilliSleep(1000);

@@ -131,7 +131,7 @@ uint16_t GetListenPort()
 bool CConnman::HaveNodes()
 {
     LOCK(g_connman->cs_vNodes);
-    return g_connman->vNodes.empty();
+    return !g_connman->vNodes.empty();
 }
 
 
