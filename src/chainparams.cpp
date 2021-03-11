@@ -124,7 +124,7 @@ public:
 
         // By default assume that the signatures in ancestors of this block are valid.	        // By default assume that the signatures in ancestors of this block are valid.
         consensus.defaultAssumeValid = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000);
-
+		
         /**	        /**
          * The message start string is designed to be unlikely to occur in normal data.	         * The message start string is designed to be unlikely to occur in normal data.
          * The characters are rarely used upper ASCII, not valid as UTF-8, and produce	         * The characters are rarely used upper ASCII, not valid as UTF-8, and produce
@@ -298,8 +298,8 @@ public:
 
 		// Proof of stake
         consensus.posLimit = uint256S("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
-        consensus.nStakeMinAge = 60 * 60 * 1 * 1; // 1h, minimum age for coin age:  6h
-        consensus.nStakeMaxAge = 60 * 60 * 8 * 1; // 8h, stake age of full weight:  4d 60*60*24*1
+        consensus.nStakeMinAge = 60 * 60; // 1h, minimum age for coin age:  6h
+        consensus.nStakeMaxAge = 60 * 60; // 8h, stake age of full weight:  4d 60*60*24*1
         consensus.nStakeTargetSpacing = 60;       // 60 sec block spacing
 
         // Deployment of Taproot (BIPs 340-342)
