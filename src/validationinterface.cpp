@@ -158,6 +158,7 @@ void UnregisterAllValidationInterfaces()
     }
     g_signals.m_internals->Clear();
     g_signals.m_internals->CreateCoinStake.disconnect_all_slots();
+
 }
 
 void CMainSignals::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool& result)

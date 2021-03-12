@@ -182,18 +182,12 @@ public:
 
         vSeeds.emplace_back("213.136.75.147");
         bech32_hrp = "bc";
-        /*
-        PUBKEY_ADDRESS = 27,  // CloakCoin: address begin with 'C'
-        SCRIPT_ADDRESS = 85, 
-        PUBKEY_ADDRESS_TEST = 111,
-        SCRIPT_ADDRESS_TEST = 196,
-		*/
-
-        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 27);
-        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 85);
-        base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 176); // TODO: check if value should be changed
-        base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x88, 0xB2, 0x1E};       // TODO: check if value should be changed
-        base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x88, 0xAD, 0xE4};       // TODO: check if value should be changed
+        
+		base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,27);
+		base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,85);
+		base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 155);
+		base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x88, 0xB2, 0x1E};
+		base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x88, 0xAD, 0xE4};
 
         bech32_hrp = "cc";
 
