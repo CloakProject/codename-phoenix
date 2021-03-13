@@ -1,0 +1,2 @@
+If you get an error building the project, you might need to generate your vcxproj files.
+Check the README in the build_msvc folder.
