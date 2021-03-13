@@ -532,6 +532,9 @@ BOOST_AUTO_TEST_CASE(ccoins_serialization)
         ss4 >> cc4;
         BOOST_CHECK_MESSAGE(false, "We should have thrown");
     } catch (const std::ios_base::failure&) {
+        std::cout << "Caught an ios_base::failure.\n"
+                  << "Explanatory string: " << e.what() << '\n'
+                  << "Error code: " << e.code() << '\n';
     }
 
     // Very large scriptPubKey (3*10^9 bytes) past the end of the stream
@@ -545,6 +548,9 @@ BOOST_AUTO_TEST_CASE(ccoins_serialization)
         ss5 >> cc5;
         BOOST_CHECK_MESSAGE(false, "We should have thrown");
     } catch (const std::ios_base::failure&) {
+        std::cout << "Caught an ios_base::failure.\n"
+                  << "Explanatory string: " << e.what() << '\n'
+                  << "Error code: " << e.code() << '\n';
     }
 }
 
@@ -745,6 +751,8 @@ static void CheckAddCoinBase(CAmount base_value, CAmount cache_value, CAmount mo
     } catch (std::logic_error&) {
         result_value = FAIL;
         result_flags = NO_ENTRY;
+        std::cout << "Caught an std::logic_error.\n"
+                  << "Explanatory string: " << e.what() << '\n';
     }
 
     BOOST_CHECK_EQUAL(result_value, expected_value);
@@ -806,6 +814,8 @@ void CheckWriteCoins(CAmount parent_value, CAmount child_value, CAmount expected
     } catch (std::logic_error&) {
         result_value = FAIL;
         result_flags = NO_ENTRY;
+        std::cout << "Caught an std::logic_error.\n"
+                  << "Explanatory string: " << e.what() << '\n';
     }
 
     BOOST_CHECK_EQUAL(result_value, expected_value);

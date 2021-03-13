@@ -8,6 +8,7 @@
 
 #include <uint256.h>
 #include <limits>
+#include <arith_uint256.h>
 
 namespace Consensus {
 
@@ -73,7 +74,7 @@ struct Params {
     uint32_t nMinerConfirmationWindow;
     BIP9Deployment vDeployments[MAX_VERSION_BITS_DEPLOYMENTS];
     /** Proof of work parameters */
-    uint256 powLimit;
+    arith_uint256 nProofOfWorkLimit;
     bool fPowAllowMinDifficultyBlocks;
     bool fPowNoRetargeting;
     int64_t nPowTargetSpacing;
@@ -83,6 +84,12 @@ struct Params {
     uint256 nMinimumChainWork;
     /** By default assume that the signatures in ancestors of this block are valid */
     uint256 defaultAssumeValid;
+	
+    // proof of stake
+    arith_uint256 nProofOfStakeLimit;
+    unsigned int nStakeMinAge;
+    unsigned int nStakeMaxAge;
+    unsigned int nStakeTargetSpacing;     
 
     /**
      * If true, witness commitments contain a payload equal to a Bitcoin Script solution
