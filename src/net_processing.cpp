@@ -506,6 +506,11 @@ static void PushNodeVersion(CNode& pnode, CConnman& connman, int64_t nTime)
     connman.PushMessage(&pnode, CNetMsgMaker(INIT_PROTO_VERSION).Make(NetMsgType::VERSION, PROTOCOL_VERSION, (uint64_t)nLocalNodeServices, nTime, addrYou, addrMe,
             nonce, strSubVersion, nNodeStartingHeight, ::g_relay_txes && pnode.m_tx_relay != nullptr));
 
+    if (strCommand == NetMsgType::ENG_ANNOUNCEMENT) {
+        // Enigma Announcement
+        return true;
+    }
+
     if (fLogIPs) {
         LogPrint(BCLog::NET, "send version message: version %d, blocks=%d, us=%s, them=%s, peer=%d\n", PROTOCOL_VERSION, nNodeStartingHeight, addrMe.ToString(), addrYou.ToString(), nodeid);
     } else {
@@ -3475,8 +3480,15 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         }
         headers.resize(nCount);
         for (unsigned int n = 0; n < nCount; n++) {
-            vRecv >> headers[n];
-            ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
+            //vRecv >> headers[n];
+            //ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
+			CBlock b;
+            vRecv >> b;
+            ReadCompactSize(vRecv); // ignore tx count; assume it is 0.	           
+            headers[n] = b.GetBlockHeader();
+            // int size = ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
+            int xx = 1;
+
         }
 
         return ProcessHeadersMessage(pfrom, headers, /*via_compact_block=*/false);
@@ -4139,6 +4151,9 @@ bool PeerManager::SendMessages(CNode* pto)
         // Start block sync
         if (pindexBestHeader == nullptr)
             pindexBestHeader = ::ChainActive().Tip();
+
+		 bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
+
         bool fFetch = state.fPreferredDownload || (nPreferredDownload == 0 && !pto->fClient && !pto->IsAddrFetchConn()); // Download if this is a nice peer, or we have no nice peers and this one might do.
         if (!state.fSyncStarted && !pto->fClient && !fImporting && !fReindex) {
             // Only actively request headers from a single peer, unless we're close to today.
@@ -4174,7 +4189,10 @@ bool PeerManager::SendMessages(CNode* pto)
             // add all to the inv queue.
             LOCK(pto->cs_inventory);
             std::vector<CBlock> vHeaders;
-            bool fRevertToInv = ((!state.fPreferHeaders &&
+
+            bool canHandlePoSHeaders = pto->nVersion >= VERSION_GETHEADERS_POS;
+            bool fRevertToInv = (canHandlePoSHeaders == false ||
+                                 (!state.fPreferHeaders &&
                                  (!state.fPreferHeaderAndIDs || pto->vBlockHashesToAnnounce.size() > 1)) ||
                                 pto->vBlockHashesToAnnounce.size() > MAX_BLOCKS_TO_ANNOUNCE);
             const CBlockIndex *pBestIndex = nullptr; // last header queued for delivery

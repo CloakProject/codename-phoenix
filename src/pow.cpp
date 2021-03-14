@@ -78,13 +78,15 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     arith_uint256 bnTarget;
 
     bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
+    std::string hashy = hash.GetHex();
 
     // Check range
     if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
         return false;
 
-    // Check proof of work matches claimed amount
-    if (UintToArith256(hash) > bnTarget)
+	// Check proof of work matches claimed amount	
+    // NOTE: original cloak genesis block doesn't meet proof of work requirements. check and exclude it.
+    if (UintToArith256(hash) > bnTarget && hash != params.hashGenesisBlock)
         return false;
 
     return true;
