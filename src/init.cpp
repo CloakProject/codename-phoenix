@@ -59,7 +59,7 @@
 #include <util/threadnames.h>
 #include <util/translation.h>
 #include <validation.h>
-
+#include <pos.h>
 #include <validationinterface.h>
 #include <walletinitinterface.h>
 
@@ -1992,6 +1992,8 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     }
 
     connOptions.vSeedNodes = args.GetArgs("-seednode");
+    if (connOptions.m_specified_outgoing.empty())
+        connOptions.vSeedNodes.insert(connOptions.vSeedNodes.end(), chainparams.DNSSeeds().begin(), chainparams.DNSSeeds().end());
 
     // Initiate outbound connections unless connect=0
     connOptions.m_use_addrman_outgoing = !args.IsArgSet("-connect");

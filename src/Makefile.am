@@ -403,7 +403,37 @@ crypto_libbitcoin_crypto_base_a_SOURCES = \
   crypto/hmac_sha256.cpp \
   crypto/hmac_sha256.h \
   crypto/hmac_sha512.cpp \
+ 
   crypto/hmac_sha512.h \
+  crypto/sha512.h \
+  crypto/aes_helper.c \  
+  crypto/blake.c \
+  crypto/bmw.c \
+  crypto/cubehash.c \
+  crypto/echo.c \  
+  crypto/fugue.c \  
+  crypto/groestl.c \
+  crypto/hamsi.c \  
+  crypto/hamsi_helper.c \
+  crypto/jh.c \  
+  crypto/keccak.c \  
+  crypto/luffa.c \                
+  crypto/shavite.c \               
+  crypto/simd.c \                    
+  crypto/skein.c \
+  crypto/sph_simd.h \                     
+  crypto/sph_shavite.h \
+  crypto/sph_skein.h \ 
+  crypto/sph_jh.h \
+  crypto/sph_hamsi.h \
+  crypto/sph_keccak.h \
+  crypto/sph_echo.h \
+  crypto/sph_fugue.h \
+  crypto/sph_groestl.h \
+  crypto/sph_cubehash.h \
+  crypto/sph_bmw.h \
+  crypto/sph_blake.h \  
+  crypto/sph_luffa.h \
   crypto/poly1305.h \
   crypto/poly1305.cpp \
   crypto/ripemd160.cpp \
