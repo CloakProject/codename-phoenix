@@ -6,6 +6,7 @@
 #ifndef BITCOIN_UINT256_H
 #define BITCOIN_UINT256_H
 
+#include <crypto/common.h>
 #include <assert.h>
 #include <cstring>
 #include <stdint.h>
@@ -47,11 +48,11 @@ public:
     friend inline bool operator!=(const base_blob& a, const base_blob& b) { return a.Compare(b) != 0; }
     friend inline bool operator<(const base_blob& a, const base_blob& b)
     {
-	for (int i = sizeof(a.data) - 1; i >= 0; i--)
+	for (int i = sizeof(a.data()) - 1; i >= 0; i--)
 	{
-	    if (a.data[i] < b.data[i])
+	    if (a.data()[i] < b.data()[i])
 			return true;
-		else if (a.data[i] > b.data[i])
+		else if (a.data()[i] > b.data()[i])
 			return false;
 	}
 	return false;
@@ -183,13 +184,13 @@ public:
      */
     uint64_t GetCheapHash() const
     {
-        return ReadLE64(data);
+        return ReadLE64(data());
     }
     uint256 trim256() const
     {
         uint256 ret;
         for (unsigned int i = 0; i < uint256::WIDTH; i++) {
-            ret.data[i] = data[i];
+            ret.data()[i] = data()[i];
         }
         return ret;
     }

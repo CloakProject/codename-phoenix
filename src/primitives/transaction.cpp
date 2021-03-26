@@ -10,7 +10,6 @@
 #include <util/strencodings.h>
 
 #include <assert.h>
-#include <utilstrencodings.h>
 #include <arith_uint256.h>
 #include <addrman.h>
 #include <primitives/block.h>
