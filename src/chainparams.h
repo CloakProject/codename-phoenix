@@ -121,6 +121,7 @@ protected:
     CBlock genesis;
     std::vector<SeedSpec6> vFixedSeeds;
 	bool fMiningRequiresPeers;
+    bool m_fallback_fee_enabled;
     bool fDefaultConsistencyChecks;
     bool fRequireStandard;
     bool m_is_test_chain;

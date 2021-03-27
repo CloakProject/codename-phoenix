@@ -200,10 +200,10 @@ static bool getScriptFromDescriptor(const std::string& descriptor, CScript& scri
         GetMainSignals().SignBlock(pblock, signedOk);
 
         // cloak: test block validity outside of CreateNewBlock so that mroot is set and block is signed
-        CValidationState state;
-        CBlockIndex* pindexPrev = chainActive.Tip();
+        BlockValidationState state;
+        CBlockIndex* pindexPrev = ::ChainActive().Tip();
         if (!TestBlockValidity(state, Params(), *pblock, pindexPrev, true, true, true)) {
-            throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
+            throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, state.ToString()));
         }
 
         std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);

@@ -43,6 +43,7 @@ class CNode;
 class BanMan;
 struct bilingual_str;
 
+// note: double check these values for cloak!
 /** Default for -whitelistrelay. */
 static const bool DEFAULT_WHITELISTRELAY = true;
 /** Default for -whitelistforcerelay. */

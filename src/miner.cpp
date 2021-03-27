@@ -28,6 +28,7 @@
 #include <net.h>
 #include <wallet/crypter.h>
 #include <wallet/wallet.h>
+#include <util/time.cpp>
 
 // Unconfirmed transactions in the memory pool often depend on other
 // transactions in the memory pool. When we select transactions from the
@@ -113,10 +114,7 @@ void BlockAssembler::resetBlock()
     nFees = 0;
 }
 
-Optional<int64_t> BlockAssembler::m_last_block_num_txs{nullopt};
-Optional<int64_t> BlockAssembler::m_last_block_weight{nullopt};
-
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fProofOfStake)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, bool fProofOfStake, CAmount& nFees)
 {
     int64_t nTimeStart = GetTimeMicros();
 
@@ -241,7 +239,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     pblock->nNonce         = 0;
     pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(*pblock->vtx[0]);
 
-    GetMainSignals().SignBlock(pblock);
+    bool signedOk = false;
+    GetMainSignals().SignBlock(pblock, signedOk);
     BlockValidationState state;
     
     if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false, true)) {
@@ -544,7 +543,6 @@ void Staker::CloakStaker(const CChainParams& chainparams)
 {
     LogPrintf("CloakStaker started\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
-    RenameThread("cloak-staker");
 
     std::shared_ptr<CReserveScript> coinbaseScript;
     GetMainSignals().GetScriptForMining(coinbaseScript);
@@ -558,27 +556,27 @@ void Staker::CloakStaker(const CChainParams& chainparams)
 
         while (true)
         {
-            if (chainparams.MiningRequiresPeers() || IsInitialBlockDownload()) {
+            if (chainparams.MiningRequiresPeers() || ::ChainstateActive().IsInitialBlockDownload()) {
                 // Busy-wait for the network to come online so we don't waste time mining
                 // on an obsolete chain. In regtest mode we expect to fly solo.
                 do {
-                    if (g_connman->HaveNodes() == true && !IsInitialBlockDownload())
+                    if (g_connman->HaveNodes() == true && !::ChainstateActive().IsInitialBlockDownload())
                         break;
                     nLastCoinStakeSearchInterval = 0;
-                    MilliSleep(1000);
+                    UninterruptibleSleep(std::chrono::milliseconds{1000});
                 } while (true);
             }
 
             while (!fStaking)
             {
-                MilliSleep(1000);
+                UninterruptibleSleep(std::chrono::milliseconds{1000});
             }
 
             /*
             while (pwalletMain->IsLocked())
             {
                 nLastCoinStakeSearchInterval = 0;
-                MilliSleep(1000);
+                UninterruptibleSleep(std::chrono::milliseconds{1000});
             }
             */
 
@@ -595,7 +593,7 @@ void Staker::CloakStaker(const CChainParams& chainparams)
                 }
                 if (fIncorrectTime) {
                     if (!NtpClockSync()) {
-                        MilliSleep(10000);
+                        UninterruptibleSleep(std::chrono::milliseconds{10000});
                         continue;
                     }
                     else {
@@ -611,9 +609,9 @@ void Staker::CloakStaker(const CChainParams& chainparams)
             //
             // Create new block
             //
-            uint64_t nFees = 0;
+            CAmount nFees = 0;
 
-            std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript, true, &nFees));
+            std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(m_mempool, Params()).CreateNewBlock(coinbaseScript->reserveScript, true, nFees));
             if (!pblocktemplate.get())
             {
                 LogPrintf("Error in NavCoinStaker: Keypool ran out, please call keypoolrefill before restarting the staking thread\n");
@@ -621,12 +619,12 @@ void Staker::CloakStaker(const CChainParams& chainparams)
             }
             CBlock *pblock = &pblocktemplate->block;
             
-            //LogPrint("coinstake","Running NavCoinStaker with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
+            //LogPrint("coinstake","Running CloakCoinStaker with %u transactions in block (%u bytes)\n", pblock->vtx.size(),
             //     ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));            
             
             // ppcoin: if proof-of-stake block found then process block
             if (pblock->IsProofOfStake()) {
-                CBlockIndex* pindexPrev = chainActive.Tip();
+                CBlockIndex* pindexPrev = ::ChainActive().Tip();
                 IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
                 // cloak - sign the block
@@ -638,16 +636,16 @@ void Staker::CloakStaker(const CChainParams& chainparams)
                     SetThreadPriority(THREAD_PRIORITY_NORMAL);
 
                     // cloak: test block validity outside of CreateNewBlock so that mroot is set and block is signed
-                    CValidationState state;
+                    BlockValidationState state;
                     if (!TestBlockValidity(state, Params(), *pblock, pindexPrev, true, true, true)) {
-                        throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, FormatStateMessage(state)));
+                        throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, state.ToString()));
                     }
 
                     SetThreadPriority(THREAD_PRIORITY_LOWEST);
-                    MilliSleep(500);
+                    UninterruptibleSleep(std::chrono::milliseconds{500});
                 }
                 else {
-                    MilliSleep(nMinerSleep);
+                    UninterruptibleSleep(std::chrono::milliseconds{nMinerSleep});
                 }
             }            
 

@@ -94,7 +94,7 @@ static const bool DEFAULT_STOPAFTERBLOCKIMPORT = false;
 unsigned int nMinerSleep;
 
 std::unique_ptr<CConnman> g_connman;
-std::unique_ptr<PeerLogicValidation> peerLogic;
+std::unique_ptr<PeerManager> peerLogic;
 
 #if !(ENABLE_WALLET)
 class DummyWalletInit : public WalletInitInterface {

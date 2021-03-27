@@ -3633,7 +3633,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
     // The following split & combine thresholds are important to security
     // Should not be adjusted if you don't understand the consequences
     static unsigned int nStakeSplitAge = (60 * 60 * 24 * 30);
-    const CBlockIndex* pIndex0 = GetLastBlockIndex(chainActive.Tip(), false);
+    const CBlockIndex* pIndex0 = GetLastBlockIndex(::ChainActive().Tip(), false);
     int64_t nCombineThreshold = 0;
     if (pIndex0->pprev)
         nCombineThreshold = GetBlockSubsidy(pIndex0->nHeight, DEFAULT_BLOCK_MIN_TX_FEE) / 3;
