@@ -2720,7 +2720,6 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                 //     // this breaks things if not handled correctly... 
                 // }
 
-                bool canHandlePoSHeaders = pfrom->nVersion >= VERSION_GETHEADERS_POS;
                 if (!fAlreadyHave && !fImporting && !fReindex && !mapBlocksInFlight.count(inv.hash)) {
                     // Headers-first is the primary method of announcement on
                     // the network. If a node fell back to sending blocks by inv,
@@ -2748,14 +2747,18 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         }
 
         if (best_block != nullptr) {
+            bool canHandlePoSHeaders = pfrom.nVersion >= VERSION_GETHEADERS_POS;
+
             if (canHandlePoSHeaders) {
                 m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETHEADERS, ::ChainActive().GetLocator(pindexBestHeader), *best_block));
                 LogPrint(BCLog::NET, "getheaders (%d) %s to peer=%d\n", pindexBestHeader->nHeight, best_block->ToString(), pfrom.GetId());
             } else {
                 // older client, getdata->block
                 std::vector<CInv> invs;
-                invs.push_back(CInv(MSG_BLOCK, inv.hash));
-                m_connman->PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
+                for (CInv& inv : vInv) {
+                    invs.push_back(CInv(MSG_BLOCK, inv.hash));
+                };
+                m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
             }
         }
 
@@ -3577,10 +3580,10 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                 if (!mapProofOfStake.count(pblock->GetHash())) // add to mapProofOfStake
                     mapProofOfStake.insert(std::make_pair(pblock->GetHash(), hashProofOfStake));
 
-                ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+                ProcessNewBlock(Params(), pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
             }
         } else {
-            ProcessNewBlock(chainparams, pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+            ProcessNewBlock(Params(), pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
         }
         if (fNewBlock) {
             pfrom.nLastBlockTime = GetTime();
@@ -4238,7 +4241,7 @@ bool PeerManager::SendMessages(CNode* pto)
                 } else {
                     // older client, revert to using getblocks
                     LogPrint(BCLog::NET, "getblocks (%d) to peer=%d\n", pindexStart->nHeight, pto->GetId());
-                    m_connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETBLOCKS, ::ChainActive().GetLocator(pindexStart), uint256()));
+                    m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETBLOCKS, ::ChainActive().GetLocator(pindexStart), uint256()));
                 }
             }
         }

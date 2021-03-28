@@ -9,14 +9,15 @@
 #include <chain.h>
 #include <primitives/block.h>
 #include <uint256.h>
-#include <utilmoneystr.h>
+#include <util/moneystr.h>
 #include <policy/policy.h>
 #include <addrman.h>
-#include <util.h>
+//#include <util.h>
+#include <txdb.h>
 #include <streams.h>
 #include <hash.h>
 #include <miner.h>
-#include <utiltime.h>
+#include <util/time.h>
 #include <chainparams.h>
 #include <consensus/validation.h>
 #include <script/interpreter.h>
@@ -44,6 +45,7 @@ typedef std::vector<TimeHash> TimestampedHashes;
 
 std::set<std::pair<COutPoint, unsigned int> > setStakeSeen;
 std::map<uint256, uint256> mapProofOfStake;
+std::map<uint256, CBlockIndex*> m_block_index;
 // Hard checkpoints of stake modifiers to ensure they are deterministic
 static std::map<int, unsigned int> mapStakeModifierCheckpoints = {{0, 0xfd11f4e7u}};
 
@@ -112,7 +114,7 @@ static bool SelectBlockFromCandidates(
     std::vector<const CBlockIndex*> indexes;
     for (const std::pair<int64_t, arith_uint256>& item : vSortedByTimestamp) 
     {
-        idx++;
+        //idx++;
         if (!m_block_index.count(ArithToUint256(item.second)))
             return error("SelectBlockFromCandidates: failed to find block index for candidate block %s", item.second.ToString().c_str());
         const CBlockIndex* pindex = m_block_index[ArithToUint256(item.second)];
@@ -295,7 +297,7 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
     // loop to find the stake modifier later by a selection interval
     while (nStakeModifierTime < pindexFrom->GetBlockTime() + nStakeModifierSelectionInterval)
     {
-        if (!chainActive.Next(pindex))
+        if (!::ChainActive().Next(pindex))
         {   // reached best block; may happen if node is behind on block chain
             if (fPrintProofOfStake || (pindex->GetBlockTime() + Params().GetConsensus().nStakeMinAge - nStakeModifierSelectionInterval > GetAdjustedTime()))
                 return error("GetKernelStakeModifier() : reached best block %s at height %d from block %s",
@@ -308,7 +310,7 @@ static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifi
                 return false;
             }
         }
-        pindex = chainActive.Next(pindex);
+        pindex = ::ChainActive().Next(pindex);
         if (pindex->GeneratedStakeModifier())
         {            
             nStakeModifierHeight = pindex->nHeight;
@@ -493,9 +495,9 @@ bool GetCoinAge(uint64_t& nCoinAge, CTransactionRef tx)
             return false;  // Transaction timestamp violation
 
         // Read block header
-        CBlockIndex* pblockindex = mapBlockIndex[hashPrevBlock];
+        CBlockIndex* pblockindex = m_block_index[hashPrevBlock];
         CBlock blockPrev;
-        CDiskBlockPos blockPos = pblockindex->GetBlockPos();
+        FlatFilePos blockPos = pblockindex->GetBlockPos();
 
         if (!ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()))
             return false; // unable to read block of previous transaction
@@ -558,7 +560,7 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
 
     CBlockIndex* pblockindex = m_block_index[hashPrevBlock];
     CBlock blockPrev;
-    CDiskBlockPos blockPos = pblockindex->GetBlockPos();
+    FlatFilePos blockPos = pblockindex->GetBlockPos();
 
     if (!ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()))
         return error("CheckProofOfStake() : read block failed");

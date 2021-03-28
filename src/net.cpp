@@ -3056,6 +3056,8 @@ int64_t CConnman::PoissonNextSendInbound(int64_t now, int average_interval_secon
     return m_next_send_inv_to_incoming;
 }
 
+extern std::unique_ptr<CConnman> g_connman;
+
 bool CConnman::HaveNodes() {
     LOCK(g_connman->cs_vNodes);
     return !g_connman->vNodes.empty();

@@ -13,6 +13,7 @@
 #include <consensus/merkle.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
+#include <node/context.h>
 #include <policy/feerate.h>
 #include <policy/policy.h>
 #include <pow.h>
@@ -610,8 +611,9 @@ void Staker::CloakStaker(const CChainParams& chainparams)
             // Create new block
             //
             CAmount nFees = 0;
+            NodeContext m_node;
 
-            std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(m_mempool, Params()).CreateNewBlock(coinbaseScript->reserveScript, true, nFees));
+            std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(*m_node.mempool, Params()).CreateNewBlock(coinbaseScript->reserveScript, true, nFees));
             if (!pblocktemplate.get())
             {
                 LogPrintf("Error in NavCoinStaker: Keypool ran out, please call keypoolrefill before restarting the staking thread\n");
