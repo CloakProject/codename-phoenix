@@ -8,8 +8,6 @@
 #include <policy/feerate.h>
 #include <util/system.h>
 #include <util/moneystr.h>
-#include <util.h>
-#include <utilmoneystr.h>
 #include <wallet/wallet.h>
 
 // Descending order comparator

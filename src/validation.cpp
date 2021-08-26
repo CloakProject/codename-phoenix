@@ -39,7 +39,7 @@
 #include <txdb.h>
 #include <txmempool.h>
 #include <uint256.h>
-#include <ui_interface.h>
+//#include <ui_interface.h>
 #include <pubkey.h>
 #include <undo.h>
 #include <util/check.h> // For NDEBUG compile time check
@@ -149,7 +149,7 @@ private:
      * Every received block is assigned a unique and increasing identifier, so we
      * know which one to give priority in case of a fork.
      */
-    CCriticalSection cs_nBlockSequenceId;
+    RecursiveMutex cs_nBlockSequenceId;
     /** Blocks loaded from disk are assigned id 0, so start the counter at 1. */
     int32_t nBlockSequenceId = 1;
     /** Decreasing counter (used by subsequent preciousblock calls). */
@@ -181,7 +181,7 @@ private:
      * the ChainState CriticalSection
      * A lock that must be held when modifying this ChainState - held in ActivateBestChain()
      */
-    CCriticalSection m_cs_chainstate;
+    RecursiveMutex m_cs_chainstate;
 
 public:
     CChain chainActive;
@@ -201,7 +201,7 @@ public:
      * that it doesn't descend from an invalid block, and then add it to m_block_index.
      */
     bool AcceptBlockHeader(const CBlockHeader& block, BlockValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fCheckPow) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
-    bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, BlockValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool fIsProofOfStake, bool* fNewBlock) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, BlockValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const FlatFilePos* dbp, bool fIsProofOfStake, bool* fNewBlock) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     // Block (dis)connection on a given view:
     DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view);
@@ -243,7 +243,7 @@ private:
 
     void InvalidBlockFound(CBlockIndex* pindex, const BlockValidationState& state);
     CBlockIndex* FindMostWorkChain() EXCLUSIVE_LOCKS_REQUIRED(cs_main);
-    void ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pindexNew, const CDiskBlockPos& pos, const Consensus::Params& consensusParams) EXCLUSIVE_LOCKS_REQUIRED(cs_main);    
+    void ReceivedBlockTransactions(const CBlock& block, CBlockIndex* pindexNew, const FlatFilePos& pos, const Consensus::Params& consensusParams) EXCLUSIVE_LOCKS_REQUIRED(cs_main);    
     bool RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 } g_chainstate;
 
@@ -438,7 +438,7 @@ bool CheckSequenceLocks(const CTxMemPool& pool, const CTransaction& tx, int flag
             int maxInputHeight = 0;
             for (const int height : prevheights) {
                 // Can ignore mempool inputs since we'll fail if they had non-zero locks
-                if (height != tip->nHeight+1) {
+                if (height != tip->nHeight + 1) {
                     maxInputHeight = std::max(maxInputHeight, height);
                 }
             }
@@ -550,7 +550,10 @@ static bool CheckInputsFromMempoolAndCache(const CTransaction& tx, TxValidationS
         // here then return false.
         if (coin.IsSpent()) return false;
 
-        // Check equivalence for available inputs.
+        // If the Coin is available, there are 2 possibilities:
+        // it is available in our current ChainstateActive UTXO set,
+        // or it's a UTXO provided by a transaction in our mempool.
+        // Ensure the scriptPubKeys in Coins from CoinsView are correct.
         const CTransactionRef& txFrom = pool.get(txin.prevout.hash);
         if (txFrom) {
             assert(txFrom->GetHash() == txin.prevout.hash);
@@ -702,7 +705,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
 
     // Coinstake is only valid in a block, not as a loose transaction
     if (tx.IsCoinStake())
-        return state.DoS(100, false, REJECT_INVALID, "coinstake");
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "coinstake");
 
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
     std::string reason;
@@ -4092,7 +4095,7 @@ static FlatFilePos SaveBlockToDisk(const CBlock& block, int nHeight, const CChai
 }
 
 /** Store block on disk. If dbp is non-nullptr, the file is known to already reside on disk */
-bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, BlockValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool fIsProofOfStake, bool* fNewBlock)
+bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, BlockValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const FlatFilePos* dbp, bool fIsProofOfStake, bool* fNewBlock)
 {
     const CBlock& block = *pblock;
 
@@ -5667,6 +5670,7 @@ CChainState& ChainstateManager::InitializeChainstate(CTxMemPool& mempool, const 
 
 CChainState& ChainstateManager::ActiveChainstate() const
 {
+    LOCK(::cs_main);
     assert(m_active_chainstate);
     return *m_active_chainstate;
 }

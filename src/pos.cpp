@@ -488,7 +488,7 @@ bool GetCoinAge(uint64_t& nCoinAge, CTransactionRef tx)
         */
 
         // get input tx and block ref containing for block including input tx
-        if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), hashPrevBlock, true))
+        if (!GetTransaction(nullptr, nullptr, txin.prevout.hash, Params().GetConsensus(), hashPrevBlock))
             continue;  // previous transaction not in main chain
 
         if (tx->nTime < txPrev->nTime)
@@ -533,10 +533,11 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
     uint256 hashPrevBlock = uint256();
 
     // get input tx and block ref containing for block including input tx
-    if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), hashPrevBlock, true))
+    // if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), hashPrevBlock, true))
+    if (!GetTransaction(nullptr, nullptr, txin.prevout.hash, Params().GetConsensus(), hashPrevBlock))
         return error("CheckProofOfStake() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
         
-    CCoinsViewCache inputs(pcoinsTip.get());
+    CCoinsViewCache inputs(&::ChainstateActive().CoinsTip());   //  previously inputs(pcoinsTip.get())
 
     std::string hashBlockPrev = hashPrevBlock.GetHex();
     std::string hashPrevTxIn = txin.prevout.hash.GetHex();
@@ -565,11 +566,11 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
     if (!ReadBlockFromDisk(blockPrev, blockPos, Params().GetConsensus()))
         return error("CheckProofOfStake() : read block failed");
 
-    int prevTxOffsetInBlock = blockPos.nPos + GetSerializeSize(CBlock(), SER_DISK, CLIENT_VERSION) - (2 * GetSizeOfCompactSize(0)) + GetSizeOfCompactSize(blockPrev.vtx.size());
+    int prevTxOffsetInBlock = blockPos.nPos + GetSerializeSize(CBlock(), CLIENT_VERSION) - (2 * GetSizeOfCompactSize(0)) + GetSizeOfCompactSize(blockPrev.vtx.size());
     for (auto& i : blockPrev.vtx) {
         if (i->GetHash() == txPrev->GetHash())
             break;
-        prevTxOffsetInBlock += GetSerializeSize(i, SER_DISK, CLIENT_VERSION);
+        prevTxOffsetInBlock += GetSerializeSize(i, CLIENT_VERSION);
     }
 
     if (!CheckStakeKernelHash(nBits, pblockindex, prevTxOffsetInBlock - blockPos.nPos, txPrev, txin.prevout, tx->nTime, hashProofOfStake))

@@ -78,7 +78,7 @@
  *   result will be present in that variable after the call. Passing a temporary
  *   is useless in that context.
  */
-template<typename C>
+template <typename C>
 class Span
 {
     C* m_data;
@@ -93,7 +93,9 @@ public:
      * which is hard to implement without std::address_of.
      */
     template <typename T, typename std::enable_if<std::is_convertible<T (*)[], C (*)[]>::value, int>::type = 0>
-    constexpr Span(T* begin, std::size_t size) noexcept : m_data(begin), m_size(size) {}
+    constexpr Span(T* begin, std::size_t size) noexcept : m_data(begin), m_size(size)
+    {
+    }
 
     /** Construct a span from a begin and end pointer.
      *
@@ -115,7 +117,9 @@ public:
      *  For example this means that a Span<T> can be converted into a Span<const T>.
      */
     template <typename O, typename std::enable_if<std::is_convertible<O (*)[], C (*)[]>::value, int>::type = 0>
-    constexpr Span(const Span<O>& other) noexcept : m_data(other.m_data), m_size(other.m_size) {}
+    constexpr Span(const Span<O>& other) noexcept : m_data(other.m_data), m_size(other.m_size)
+    {
+    }
 
     /** Default copy constructor. */
     constexpr Span(const Span&) noexcept = default;
@@ -125,7 +129,9 @@ public:
 
     /** Construct a Span from an array. This matches the corresponding C++20 std::span constructor. */
     template <int N>
-    constexpr Span(C (&a)[N]) noexcept : m_data(a), m_size(N) {}
+    constexpr Span(C (&a)[N]) noexcept : m_data(a), m_size(N)
+    {
+    }
 
     /** Construct a Span for objects with .data() and .size() (std::string, std::array, std::vector, ...).
      *
@@ -135,7 +141,9 @@ public:
      * Note that this restriction does not exist when converting arrays or other Spans (see above).
      */
     template <typename V, typename std::enable_if<(std::is_const<C>::value || std::is_lvalue_reference<V>::value) && std::is_convertible<typename std::remove_pointer<decltype(std::declval<V&>().data())>::type (*)[], C (*)[]>::value && std::is_convertible<decltype(std::declval<V&>().size()), std::size_t>::value, int>::type = 0>
-    constexpr Span(V&& v) noexcept : m_data(v.data()), m_size(v.size()) {}
+    constexpr Span(V&& v) noexcept : m_data(v.data()), m_size(v.size())
+    {
+    }
 
     constexpr C* data() const noexcept { return m_data; }
     constexpr C* begin() const noexcept { return m_data; }
@@ -174,8 +182,8 @@ public:
     }
     CONSTEXPR_IF_NOT_DEBUG Span<C> last(std::size_t count) const noexcept
     {
-         ASSERT_IF_DEBUG(size() >= count);
-         return Span<C>(m_data + m_size - count, count);
+        ASSERT_IF_DEBUG(size() >= count);
+        return Span<C>(m_data + m_size - count, count);
     }
 
     friend constexpr bool operator==(const Span& a, const Span& b) noexcept { return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin()); }
@@ -185,16 +193,29 @@ public:
     friend constexpr bool operator>(const Span& a, const Span& b) noexcept { return (b < a); }
     friend constexpr bool operator>=(const Span& a, const Span& b) noexcept { return !(a < b); }
 
-    template <typename O> friend class Span;
+    template <typename O>
+    friend class Span;
 };
 
 // MakeSpan helps constructing a Span of the right type automatically.
 /** MakeSpan for arrays: */
-template <typename A, int N> Span<A> constexpr MakeSpan(A (&a)[N]) { return Span<A>(a, N); }
+template <typename A, int N>
+Span<A> constexpr MakeSpan(A (&a)[N])
+{
+    return Span<A>(a, N);
+}
 /** MakeSpan for temporaries / rvalue references, only supporting const output. */
-template <typename V> constexpr auto MakeSpan(V&& v) -> typename std::enable_if<!std::is_lvalue_reference<V>::value, Span<const typename std::remove_pointer<decltype(v.data())>::type>>::type { return std::forward<V>(v); }
+template <typename V>
+constexpr auto MakeSpan(V&& v) -> typename std::enable_if<!std::is_lvalue_reference<V>::value, Span<const typename std::remove_pointer<decltype(v.data())>::type>>::type
+{
+    return std::forward<V>(v);
+}
 /** MakeSpan for (lvalue) references, supporting mutable output. */
-template <typename V> constexpr auto MakeSpan(V& v) -> Span<typename std::remove_pointer<decltype(v.data())>::type> { return v; }
+template <typename V>
+constexpr auto MakeSpan(V& v) -> Span<typename std::remove_pointer<decltype(v.data())>::type>
+{
+    return v;
+}
 
 /** Pop the last element off a span, and return a reference to that element. */
 template <typename T>
@@ -214,9 +235,17 @@ inline const unsigned char* UCharCast(const char* c) { return (unsigned char*)c;
 inline const unsigned char* UCharCast(const unsigned char* c) { return c; }
 
 // Helper function to safely convert a Span to a Span<[const] unsigned char>.
-template <typename T> constexpr auto UCharSpanCast(Span<T> s) -> Span<typename std::remove_pointer<decltype(UCharCast(s.data()))>::type> { return {UCharCast(s.data()), s.size()}; }
+template <typename T>
+constexpr auto UCharSpanCast(Span<T> s) -> Span<typename std::remove_pointer<decltype(UCharCast(s.data()))>::type>
+{
+    return {UCharCast(s.data()), s.size()};
+}
 
 /** Like MakeSpan, but for (const) unsigned char member types only. Only works for (un)signed char containers. */
-template <typename V> constexpr auto MakeUCharSpan(V&& v) -> decltype(UCharSpanCast(MakeSpan(std::forward<V>(v)))) { return UCharSpanCast(MakeSpan(std::forward<V>(v))); }
+template <typename V>
+constexpr auto MakeUCharSpan(V&& v) -> decltype(UCharSpanCast(MakeSpan(std::forward<V>(v))))
+{
+    return UCharSpanCast(MakeSpan(std::forward<V>(v)));
+}
 
 #endif
