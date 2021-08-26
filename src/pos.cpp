@@ -130,7 +130,7 @@ static bool SelectBlockFromCandidates(
         std::string strHashProof = hashProof.GetHex();
         CDataStream ss(SER_GETHASH, 0);
         ss << hashProof << nStakeModifierPrev;        
-        arith_uint256 hashSelection = UintToArith256(Hash(ss.begin(), ss.end()));
+        arith_uint256 hashSelection = UintToArith256(Hash(ss));
         std::string strHashSelection = hashSelection.GetHex();
         // the selection hash is divided by 2**32 so that proof-of-stake block
         // is always favored over proof-of-work block. this is to preserve
@@ -274,7 +274,7 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
     if (pindex->pprev)
         ss << pindex->pprev->nStakeModifierChecksum;
     ss << pindex->nFlags << pindex->hashProofOfStake << pindex->nStakeModifier;
-    arith_uint256 hashChecksum = UintToArith256(Hash(ss.begin(), ss.end()));
+    arith_uint256 hashChecksum = UintToArith256(Hash(ss));
     hashChecksum >>= (256 - 32);
     if (gArgs.GetBoolArg("-printstakemodifier", false))
         LogPrint(BCLog::SELECTCOINS, "stake checksum : 0x % 016x", ArithToUint256(hashChecksum).GetUint64(0));
@@ -397,7 +397,7 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     // create PoS hash
     ss << nStakeModifier;
     ss << nTimeBlockFrom << nTxPrevOffset << txPrev->nTime << prevout.n << nTimeTx;
-    hashProofOfStake = Hash(ss.begin(), ss.end());
+    hashProofOfStake = Hash(ss);
     if (fPrintProofOfStake)
     {
         LogPrint(BCLog::ALL, "CheckStakeKernelHash() : using modifier 0x%d at height=%d timestamp=%s for block from height=%d timestamp=%s\n",
