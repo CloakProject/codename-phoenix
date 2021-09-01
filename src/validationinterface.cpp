@@ -261,13 +261,16 @@ void CMainSignals::NewPoWValidBlock(const CBlockIndex *pindex, const std::shared
 }
 
 void CMainSignals::GetScriptForMining(std::shared_ptr<CReserveScript>& script) {
-    m_internals->GetScriptForMining(script);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.GetScriptForMining(script); });
+    // m_internals->GetScriptForMining(script);
 }
 
 void CMainSignals::SignBlock(CBlock* pblock, bool &result){
-    m_internals->SignBlock(pblock, result);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.SignBlock(pblock, result); });
+    // m_internals->SignBlock(pblock, result);
 }
 
 void CMainSignals::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTransactionRef txNew, bool &result){
-    m_internals->CreateCoinStake(nBits, nSearchInterval, txNew, result);
+    m_internals->Iterate([&](CValidationInterface& callbacks) { callbacks.CreateCoinStake(nBits, nSearchInterval, txNew, result); });
+    // m_internals->CreateCoinStake(nBits, nSearchInterval, txNew, result);
 }

@@ -37,6 +37,7 @@
 // its ancestors.
 
 uint64_t nLastBlockTx = 0;
+uint64_t nLastBlockSize = 0;
 uint64_t nLastBlockWeight = 0;
 int64_t nLastCoinStakeSearchInterval = 0;
 uint64_t nLastSteadyTime = 0;
@@ -139,30 +140,29 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     CBlockIndex* pindexPrev = ::ChainActive().Tip();
     assert(pindexPrev != nullptr);
     nHeight = pindexPrev->nHeight + 1;
+    // TODO: check if needed ... CStateViewCache view(pcoinsTip);
+
+    // Decide whether to include witness transactions
+    // This is only needed in case the witness softfork activation is reverted
+    // (which would require a very deep reorganization) or when
+    // -promiscuousmempoolflags is used.
+    // TODO: replace this with a call to main to assess validity of a mempool
+    // transaction (which in most cases can be a no-op).
+    fIncludeWitness = IsWitnessEnabled(pindexPrev, chainparams.GetConsensus());
 
     pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());
     // -regtest only: allow overriding block.nVersion with
     // -blockversion=N to test forking scenarios
-    if (chainparams.MineBlocksOnDemand())
-        pblock->nVersion = gArgs.GetArg("-blockversion", pblock->nVersion);
+    // if (chainparams.MineBlocksOnDemand())
+    //   pblock->nVersion = gArgs.GetArg("-blockversion", pblock->nVersion);
 
     pblock->nTime = GetAdjustedTime();
+
     const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
 
     nLockTimeCutoff = (STANDARD_LOCKTIME_VERIFY_FLAGS & LOCKTIME_MEDIAN_TIME_PAST)
                        ? nMedianTimePast
                        : pblock->GetBlockTime();
-
-    // Decide whether to include witness transactions
-    // This is only needed in case the witness softfork activation is reverted
-    // (which would require a very deep reorganization).
-    // Note that the mempool would accept transactions with witness data before
-    // IsWitnessEnabled, but we would only ever mine blocks after IsWitnessEnabled
-    // unless there is a massive block reorganization with the witness softfork
-    // not activated.
-    // TODO: replace this with a call to main to assess validity of a mempool
-    // transaction (which in most cases can be a no-op).
-    fIncludeWitness = IsWitnessEnabled(pindexPrev, chainparams.GetConsensus());
 
     int nPackagesSelected = 0;
     int nDescendantsUpdated = 0;
@@ -170,39 +170,43 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
 
     int64_t nTime1 = GetTimeMicros();
 
+    /*
+    nLastBlockTx = nBlockTx;
+    nLastBlockSize = nBlockSize;
+    nLastBlockWeight = nBlockWeight;
+    */
     m_last_block_num_txs = nBlockTx;
     m_last_block_weight = nBlockWeight;
 
     // Create coinbase transaction.
     CMutableTransaction coinbaseTx;
     coinbaseTx.nTime = GetAdjustedTime(); // ppcoin: set tx time
+
     coinbaseTx.vin.resize(1);
     coinbaseTx.vin[0].prevout.SetNull();
     coinbaseTx.vout.resize(1);
-    coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
-    coinbaseTx.vout[0].nValue = GetBlockSubsidy(nHeight, nFees);
-    coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
-    pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));
-    pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
-    pblocktemplate->vTxFees[0] = -nFees;
 
-    LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
-
-    // Fill in header
-    pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
-
-    // ppcoin: set time
-    // todo: this PoS handler is present in legacy codebase but it looks like the lines below override the value - check!
-    if (pblock->IsProofOfStake())
+    if(fProofOfStake)
     {
-        pblock->nTime = pblock->vtx[1]->nTime; // same as coinstake timestamp
+        coinbaseTx.vout[0].scriptPubKey.clear();
+        coinbaseTx.vout[0].nValue = 0;
+    }
+    else
+    {
+        coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
+        coinbaseTx.vout[0].nValue = GetBlockSubsidy(nHeight, nFees);
+    }
 
-        // attempt to find a coinstake
+    coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
+    pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx)); //  legacy: pblock->vtx.push_back(txNew);
+
+    if (fProofOfStake) // attempt to find a coinstake
+    {
         pblock->nBits = GetNextTargetRequired(pindexPrev, true);
         CTransaction txCoinStake;
         int64_t nSearchTime = txCoinStake.nTime; // search to current time
-        if (nSearchTime > nLastCoinStakeSearchTime)
-        {
+        if (nSearchTime > nLastCoinStakeSearchTime) {
+            // printf(">>> OK1\n");
             bool gotCoinStake = false;
             GetMainSignals().CreateCoinStake(pblock->nBits, nSearchTime - nLastCoinStakeSearchTime, MakeTransactionRef(txCoinStake), gotCoinStake);
             if (gotCoinStake)
@@ -228,6 +232,222 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
             nLastCoinStakeSearchTime = nSearchTime;
         }
     }
+
+    pblock->nBits = GetNextTargetRequired(pindexPrev, pblock->IsProofOfStake());
+
+
+
+
+
+
+    //  LEGACY PIECE - TODO: SEE HOW IT CAN BE SIMPLIFIED
+    // Collect memory pool transactions into the block
+    // {
+    //     CTxDB txdb("r");
+
+    //     // Priority order to process transactions
+    //     list<COrphan> vOrphan; // list memory doesn't move
+    //     map<uint256, vector<COrphan*>> mapDependers;
+
+    //     // This vector will be sorted into a priority queue:
+    //     vector<TxPriority> vecPriority;
+    //     vecPriority.reserve(m_mempool.mapTx.size());
+    //     for (map<uint256, CTransaction>::iterator mi = m_mempool.mapTx.begin(); mi != m_mempool.mapTx.end(); ++mi) {
+    //         CTransaction& tx = (*mi).second;
+    //         if (tx.IsCoinBase() || tx.IsCoinStake() || !tx.IsFinal())
+    //             continue;
+
+    //         COrphan* porphan = NULL;
+    //         double dPriority = 0;
+    //         int64 nTotalIn = 0;
+    //         bool fMissingInputs = false;
+    //         BOOST_FOREACH (const CTxIn& txin, tx.vin) {
+    //             // Read prev transaction
+    //             CTransaction txPrev;
+    //             CTxIndex txindex;
+    //             if (!txPrev.ReadFromDisk(txdb, txin.prevout, txindex)) {
+    //                 // This should never happen; all transactions in the memory
+    //                 // pool should connect to either transactions in the chain
+    //                 // or other transactions in the memory pool.
+    //                 if (!m_mempool.mapTx.count(txin.prevout.hash)) {
+    //                     printf("ERROR: mempool transaction missing input\n");
+    //                     // if (fDebug) assert("mempool transaction missing input" == 0);
+    //                     fMissingInputs = true;
+    //                     if (porphan)
+    //                         vOrphan.pop_back();
+    //                     break;
+    //                 }
+
+    //                 // Has to wait for dependencies
+    //                 if (!porphan) {
+    //                     // Use list for automatic deletion
+    //                     vOrphan.push_back(COrphan(&tx));
+    //                     porphan = &vOrphan.back();
+    //                 }
+    //                 mapDependers[txin.prevout.hash].push_back(porphan);
+    //                 porphan->setDependsOn.insert(txin.prevout.hash);
+    //                 nTotalIn += m_mempool.mapTx[txin.prevout.hash].vout[txin.prevout.n].nValue;
+    //                 continue;
+    //             }
+    //             int64 nValueIn = txPrev.vout[txin.prevout.n].nValue;
+    //             nTotalIn += nValueIn;
+
+    //             int nConf = txindex.GetDepthInMainChain();
+    //             dPriority += (double)nValueIn * nConf;
+    //         }
+    //         if (fMissingInputs) continue;
+
+    //         // Priority is sum(valuein * age) / txsize
+    //         unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
+    //         dPriority /= nTxSize;
+
+    //         // This is a more accurate fee-per-kilobyte than is used by the client code, because the
+    //         // client code rounds up the size to the nearest 1K. That's good, because it gives an
+    //         // incentive to create smaller transactions.
+    //         double dFeePerKb = double(nTotalIn - tx.GetValueOut()) / (double(nTxSize) / 1000.0);
+
+    //         if (porphan) {
+    //             porphan->dPriority = dPriority;
+    //             porphan->dFeePerKb = dFeePerKb;
+    //         } else
+    //             vecPriority.push_back(TxPriority(dPriority, dFeePerKb, &(*mi).second));
+    //     }
+
+    //     // Collect transactions into block
+    //     map<uint256, CTxIndex> mapTestPool;
+    //     uint64 nBlockSize = 1000;
+    //     uint64 nBlockTx = 0;
+    //     int nBlockSigOps = 100;
+    //     bool fSortedByFee = (nBlockPrioritySize <= 0);
+
+    //     TxPriorityCompare comparer(fSortedByFee);
+    //     std::make_heap(vecPriority.begin(), vecPriority.end(), comparer);
+
+    //     while (!vecPriority.empty()) {
+    //         // Take highest priority transaction off the priority queue:
+    //         double dPriority = vecPriority.front().get<0>();
+    //         double dFeePerKb = vecPriority.front().get<1>();
+    //         CTransaction& tx = *(vecPriority.front().get<2>());
+
+    //         std::pop_heap(vecPriority.begin(), vecPriority.end(), comparer);
+    //         vecPriority.pop_back();
+
+    //         // Size limits
+    //         unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
+    //         if (nBlockSize + nTxSize >= nBlockMaxSize)
+    //             continue;
+
+    //         // Legacy limits on sigOps:
+    //         unsigned int nTxSigOps = tx.GetLegacySigOpCount();
+    //         if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
+    //             continue;
+
+    //         // Timestamp limit
+    //         if (tx.nTime > GetAdjustedTime() || (pblock->IsProofOfStake() && tx.nTime > pblock->vtx[1].nTime))
+    //             continue;
+
+    //         // ppcoin: simplify transaction fee - allow free = false
+    //         int64 nMinFee = tx.GetMinFee(nBlockSize, false, GMF_BLOCK);
+
+    //         // Skip free transactions if we're past the minimum block size:
+    //         if (fSortedByFee && (dFeePerKb < nMinTxFee) && (nBlockSize + nTxSize >= nBlockMinSize))
+    //             continue;
+
+    //         // Prioritize by fee once past the priority size or we run out of high-priority
+    //         // transactions:
+    //         if (!fSortedByFee &&
+    //             ((nBlockSize + nTxSize >= nBlockPrioritySize) || (dPriority < COIN * 144 / 250))) {
+    //             fSortedByFee = true;
+    //             comparer = TxPriorityCompare(fSortedByFee);
+    //             std::make_heap(vecPriority.begin(), vecPriority.end(), comparer);
+    //         }
+
+    //         // Connecting shouldn't fail due to dependency on other memory pool transactions
+    //         // because we're already processing them in order of dependency
+    //         map<uint256, CTxIndex> mapTestPoolTmp(mapTestPool);
+    //         MapPrevTx mapInputs;
+    //         bool fInvalid;
+    //         if (!tx.FetchInputs(txdb, mapTestPoolTmp, false, true, mapInputs, fInvalid))
+    //             continue;
+
+    //         int64 nTxFees = tx.GetValueIn(mapInputs) - tx.GetValueOut();
+    //         if (nTxFees < nMinFee)
+    //             continue;
+
+    //         nTxSigOps += tx.GetP2SHSigOpCount(mapInputs);
+    //         if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
+    //             continue;
+
+    //         if (!tx.ConnectInputs(txdb, mapInputs, mapTestPoolTmp, CDiskTxPos(1, 1, 1), pindexPrev, false, true))
+    //             continue;
+    //         mapTestPoolTmp[tx.GetHash()] = CTxIndex(CDiskTxPos(1, 1, 1), tx.vout.size());
+    //         swap(mapTestPool, mapTestPoolTmp);
+
+    //         // Added
+    //         pblock->vtx.push_back(tx);
+    //         nBlockSize += nTxSize;
+    //         ++nBlockTx;
+    //         nBlockSigOps += nTxSigOps;
+    //         nFees += nTxFees;
+
+    //         if (fDebug && GetBoolArg("-printpriority")) {
+    //             printf("priority %.1f feeperkb %.1f txid %s\n",
+    //                    dPriority, dFeePerKb, tx.GetHash().ToString().c_str());
+    //         }
+
+    //         // Add transactions that depend on this one to the priority queue
+    //         uint256 hash = tx.GetHash();
+    //         if (mapDependers.count(hash)) {
+    //             BOOST_FOREACH (COrphan* porphan, mapDependers[hash]) {
+    //                 if (!porphan->setDependsOn.empty()) {
+    //                     porphan->setDependsOn.erase(hash);
+    //                     if (porphan->setDependsOn.empty()) {
+    //                         vecPriority.push_back(TxPriority(porphan->dPriority, porphan->dFeePerKb, porphan->ptx));
+    //                         std::push_heap(vecPriority.begin(), vecPriority.end(), comparer);
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     nLastBlockTx = nBlockTx;
+    //     nLastBlockSize = nBlockSize;
+
+    //     if (fDebug && GetBoolArg("-printpriority"))
+    //         printf("CreateNewBlock(): total size %" PRI64u "\n", nBlockSize);
+
+    //     if (pblock->IsProofOfWork())
+    //         pblock->vtx[0].vout[0].nValue = GetProofOfWorkReward(pindexPrev->nHeight + 1, nFees, pindexPrev->GetBlockHash());
+
+    //     // Fill in header
+    //     pblock->hashPrevBlock = pindexPrev->GetBlockHash();
+    //     if (pblock->IsProofOfStake())
+    //         pblock->nTime = pblock->vtx[1].nTime; //same as coinstake timestamp
+    //     pblock->nTime = max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
+    //     pblock->nTime = max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - GetMaxClockDrift(pindexPrev->nHeight + 1));
+    //     if (pblock->IsProofOfWork())
+    //         pblock->UpdateTime(pindexPrev);
+    //     pblock->nNonce = 0;
+    // }
+
+    // return pblock.release();
+
+
+
+
+
+
+
+
+
+
+    pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());
+    pblocktemplate->vTxFees[0] = -nFees;
+
+    LogPrintf("CreateNewBlock(): block weight: %u txs: %u fees: %ld sigops %d\n", GetBlockWeight(*pblock), nBlockTx, nFees, nBlockSigOpsCost);
+
+    // Fill in header
+    pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
 
     pblock->nTime = std::max(pindexPrev->GetMedianTimePast() + 1, pblock->GetMaxTransactionTime());
     pblock->nTime = std::max(pblock->GetBlockTime(), pindexPrev->GetBlockTime() - GetMaxClockDrift(pindexPrev->nHeight + 1));
@@ -616,7 +836,7 @@ void Staker::CloakStaker(const CChainParams& chainparams)
             std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(*m_node.mempool, Params()).CreateNewBlock(coinbaseScript->reserveScript, true, nFees));
             if (!pblocktemplate.get())
             {
-                LogPrintf("Error in NavCoinStaker: Keypool ran out, please call keypoolrefill before restarting the staking thread\n");
+                LogPrintf("Error in CloakStaker: Keypool ran out, please call keypoolrefill before restarting the staking thread\n");
                 return;
             }
             CBlock *pblock = &pblocktemplate->block;

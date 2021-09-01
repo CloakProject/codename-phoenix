@@ -127,10 +127,24 @@ static bool GenerateBlock(ChainstateManager& chainman, CBlock& block, uint64_t& 
         return true;
     }
 
-    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
-    if (!ProcessNewBlock(Params(), shared_pblock, true, shared_pblock->IsProofOfStake(), nullptr)) {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
+
+
+
+
+    // cloak - sign the block
+    bool signedOk = false;
+    GetMainSignals().SignBlock(&block, signedOk);
+
+    // cloak: test block validity outside of CreateNewBlock so that mroot is set and block is signed
+    BlockValidationState state;
+    CBlockIndex* pindexPrev = ::ChainActive().Tip();
+    if (!TestBlockValidity(state, Params(), block, pindexPrev, true, true, true)) {
+        throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, state.ToString()));
     }
+
+    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
+    if (!ProcessNewBlock(Params(), shared_pblock, true, shared_pblock->IsProofOfStake(), nullptr))
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
 
     block_hash = block.GetHash();
     return true;
@@ -140,6 +154,7 @@ static UniValue generateBlocks(ChainstateManager& chainman, const CTxMemPool& me
 {
     int nHeightEnd = 0;
     int nHeight = 0;
+    CAmount nFees = 0;
 
     {   // Don't keep cs_main locked
         LOCK(cs_main);
@@ -150,7 +165,7 @@ static UniValue generateBlocks(ChainstateManager& chainman, const CTxMemPool& me
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd && !ShutdownRequested())
     {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(mempool, Params()).CreateNewBlock(coinbase_script, false));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(mempool, Params()).CreateNewBlock(coinbase_script, false, nFees));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
@@ -194,28 +209,6 @@ static bool getScriptFromDescriptor(const std::string& descriptor, CScript& scri
         } else {
             // Else take the 2nd script, since it is p2pkh
             script = scripts.at(1);
-        }
-        // cloak - sign the block
-        bool signedOk = false;
-        GetMainSignals().SignBlock(pblock, signedOk);
-
-        // cloak: test block validity outside of CreateNewBlock so that mroot is set and block is signed
-        BlockValidationState state;
-        CBlockIndex* pindexPrev = ::ChainActive().Tip();
-        if (!TestBlockValidity(state, Params(), *pblock, pindexPrev, true, true, true)) {
-            throw std::runtime_error(strprintf("%s: TestBlockValidity failed: %s", __func__, state.ToString()));
-        }
-
-        std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
-        if (!ProcessNewBlock(Params(), shared_pblock, true, shared_pblock->IsProofOfStake(), nullptr))
-            throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
-        ++nHeight;
-        blockHashes.push_back(pblock->GetHash().GetHex());
-
-        //mark script as important because it was used at least for one coinbase output if the script came from the wallet
-        if (keepScript)
-        {
-            coinbaseScript->KeepScript();
         }
 
         return true;
@@ -385,7 +378,8 @@ static RPCHelpMan generateblock()
         LOCK(cs_main);
 
         CTxMemPool empty_mempool;
-        std::unique_ptr<CBlockTemplate> blocktemplate(BlockAssembler(empty_mempool, chainparams).CreateNewBlock(coinbase_script));
+        CAmount nFees = 0;
+        std::unique_ptr<CBlockTemplate> blocktemplate(BlockAssembler(empty_mempool, chainparams).CreateNewBlock(coinbase_script, false, nFees));
         if (!blocktemplate) {
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         }
@@ -763,7 +757,8 @@ static RPCHelpMan getblocktemplate()
 
         // Create new block
         CScript scriptDummy = CScript() << OP_TRUE;
-        pblocktemplate = BlockAssembler(mempool, Params()).CreateNewBlock(scriptDummy, false);
+        CAmount nFees = 0;
+        pblocktemplate = BlockAssembler(mempool, Params()).CreateNewBlock(scriptDummy, false, nFees);
         if (!pblocktemplate)
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
 
