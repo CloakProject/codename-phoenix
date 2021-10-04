@@ -590,6 +590,12 @@ protected:
     std::unique_ptr<CoinsViews> m_coins_views;
 
 public:
+    BlockMap mapOrphanBlocks; // for pos v1
+    BlockMap mapOrphanBlocksByPrev; // for pos v1
+
+    std::multimap<CBlockIndex*, CBlockIndex*> mapBlocksUnlinked;
+    CBlockIndex *pindexBestInvalid = nullptr;
+
     explicit CChainState(CTxMemPool& mempool, BlockManager& blockman, uint256 from_snapshot_blockhash = uint256());
 
     /**
@@ -732,6 +738,9 @@ public:
     void PruneBlockIndexCandidates();
 
     void UnloadBlockIndex();
+
+    // Remove a random orphan block (which does not have any dependent orphans).
+    void PruneOrphanBlocks();
 
     /** Check whether we are doing an initial block download (synchronizing from disk or network) */
     bool IsInitialBlockDownload() const;

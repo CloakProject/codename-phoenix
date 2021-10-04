@@ -357,42 +357,43 @@ static RPCHelpMan signmessagewithprivkey()
     };
 }
 
-static RPCHelpMan setmocktime()
-{
-    return RPCHelpMan{"setmocktime",
-                "\nSet the local time to given timestamp (-regtest only)\n",
-                {
-                    {"timestamp", RPCArg::Type::NUM, RPCArg::Optional::NO, UNIX_EPOCH_TIME + "\n"
-            "   Pass 0 to go back to using the system time."},
-                },
-                RPCResult{RPCResult::Type::NONE, "", ""},
-                RPCExamples{""},
-        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
-{
-    if (!Params().IsMockableChain()) {
-        throw std::runtime_error("setmocktime is for regression testing (-regtest mode) only");
-    }
+// TODO: commented out, non-essential; fails to compile with a weird error
+// static RPCHelpMan setmocktime()
+// {
+//     return RPCHelpMan{"setmocktime",
+//                 "\nSet the local time to given timestamp (-regtest only)\n",
+//                 {
+//                     {"timestamp", RPCArg::Type::NUM, RPCArg::Optional::NO, UNIX_EPOCH_TIME + "\n"
+//             "   Pass 0 to go back to using the system time."},
+//                 },
+//                 RPCResult{RPCResult::Type::NONE, "", ""},
+//                 RPCExamples{""},
+//         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
+// {
+//     if (!Params().IsMockableChain()) {
+//         throw std::runtime_error("setmocktime is for regression testing (-regtest mode) only");
+//     }
 
-    // For now, don't change mocktime if we're in the middle of validation, as
-    // this could have an effect on mempool time-based eviction, as well as
-    // IsCurrentForFeeEstimation() and IsInitialBlockDownload().
-    // TODO: figure out the right way to synchronize around mocktime, and
-    // ensure all call sites of GetTime() are accessing this safely.
-    LOCK(cs_main);
+//     // For now, don't change mocktime if we're in the middle of validation, as
+//     // this could have an effect on mempool time-based eviction, as well as
+//     // IsCurrentForFeeEstimation() and IsInitialBlockDownload().
+//     // TODO: figure out the right way to synchronize around mocktime, and
+//     // ensure all call sites of GetTime() are accessing this safely.
+//     LOCK(cs_main);
 
-    RPCTypeCheck(request.params, {UniValue::VNUM});
-    int64_t time = request.params[0].get_int64();
-    SetMockTime(time);
-    if (request.context.Has<NodeContext>()) {
-        for (const auto& chain_client : request.context.Get<NodeContext>().chain_clients) {
-            chain_client->setMockTime(time);
-        }
-    }
+//     RPCTypeCheck(request.params, {UniValue::VNUM});
+//     int64_t time = request.params[0].get_int64();
+//     SetMockTime(time);
+//     if (request.context.Has<NodeContext>()) {
+//         for (const auto& chain_client : request.context.Get<NodeContext>().chain_clients) {
+//             chain_client->setMockTime(time);
+//         }
+//     }
 
-    return NullUniValue;
-},
-    };
-}
+//     return NullUniValue;
+// },
+//     };
+// }
 
 static RPCHelpMan mockscheduler()
 {
@@ -709,7 +710,7 @@ static const CRPCCommand commands[] =
     { "util",               "getindexinfo",           &getindexinfo,           {"index_name"} },
 
     /* Not shown in help */
-    { "hidden",             "setmocktime",            &setmocktime,            {"timestamp"}},
+    // { "hidden",             "setmocktime",            &setmocktime,            {"timestamp"}},
     { "hidden",             "mockscheduler",          &mockscheduler,          {"delta_time"}},
     { "hidden",             "echo",                   &echo,                   {"arg0","arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9"}},
     { "hidden",             "echojson",               &echojson,               {"arg0","arg1","arg2","arg3","arg4","arg5","arg6","arg7","arg8","arg9"}},

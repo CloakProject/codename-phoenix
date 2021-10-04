@@ -141,7 +141,6 @@ enum BlockStatus: uint32_t {
 class CBlockIndex
 {
 public:
-
     //! pointer to the hash of the block, if any. Memory is owned by this CBlockIndex
     const uint256* phashBlock{nullptr};
 
@@ -185,20 +184,20 @@ public:
     uint32_t nBits{0};
     uint32_t nNonce{0};
 
-    unsigned int nFlags; // ppcoin: block index flags
+    unsigned int nFlags{0}; // ppcoin: block index flags
     arith_uint256 hashProofOfStake;
 
     // proof-of-stake specific fields
-    uint64_t nStakeModifier; // hash modifier for proof-of-stake
-    unsigned int nStakeModifierChecksum; // checksum of index; in-memeory only
+    uint64_t nStakeModifier{0};             // hash modifier for proof-of-stake
+    unsigned int nStakeModifierChecksum{0}; // checksum of index; in-memeory only
     COutPoint prevoutStake;
-    unsigned int nStakeTime;
+    unsigned int nStakeTime{0};
 
     //! (memory only) Sequential id assigned to distinguish order in which blocks are received.
     int32_t nSequenceId{0};
 
     //! (memory only) Maximum nTime in the chain up to and including this block.
-    unsigned int nTimeMax;
+    unsigned int nTimeMax{0};
 
     void SetNull()
     {
@@ -418,6 +417,14 @@ public:
 
     SERIALIZE_METHODS(CDiskBlockIndex, obj)
     {
+        /*
+        TODO: do we need these but rzr did not port it? check!
+
+        READWRITE(hashNext);
+        READWRITE(nMint);
+        READWRITE(nMoneySupply);
+        */
+
         int _nVersion = s.GetVersion();
         if (!(s.GetType() & SER_GETHASH)) READWRITE(VARINT_MODE(_nVersion, VarIntMode::NONNEGATIVE_SIGNED));
 
@@ -428,19 +435,14 @@ public:
         if (obj.nStatus & BLOCK_HAVE_DATA) READWRITE(VARINT(obj.nDataPos));
         if (obj.nStatus & BLOCK_HAVE_UNDO) READWRITE(VARINT(obj.nUndoPos));
 
-	READWRITE(nFlags);
-        READWRITE(nStakeModifier);
-	if (IsProofOfStake())
-	{
-	    READWRITE(prevoutStake);
-	    READWRITE(nStakeTime);
-	}
-	else if (ser_action.ForRead())
-	{
-		const_cast<CDiskBlockIndex*>(this)->prevoutStake.SetNull();
-		const_cast<CDiskBlockIndex*>(this)->nStakeTime = 0;
-	}
-	READWRITE(hashProofOfStake);
+	    READWRITE(obj.nFlags);
+        
+        // stake
+        READWRITE(obj.nStakeModifier);
+	    READWRITE(obj.prevoutStake);
+        READWRITE(obj.nStakeTime);
+        READWRITE(obj.hashProofOfStake);
+
         // block header
         READWRITE(obj.nVersion);
         READWRITE(obj.hashPrev);
@@ -448,24 +450,21 @@ public:
         READWRITE(obj.nTime);
         READWRITE(obj.nBits);
         READWRITE(obj.nNonce);
-        READWRITE(blockHash);
+        READWRITE(obj.blockHash);
     }
+
 
     uint256 GetBlockHash() const
     {
         CBlockHeader block;
-        block.nVersion        = nVersion;
-        block.hashPrevBlock   = hashPrev;
-        block.hashMerkleRoot  = hashMerkleRoot;
-        block.nTime           = nTime;
-        block.nBits           = nBits;
-        block.nNonce          = nNonce;
-
-        // todo: this can be optimized by caching hashes (same for blocks) - rzr
-        const_cast<CDiskBlockIndex*>(this)->blockHash = block.GetHash();
+        block.nVersion = nVersion;
+        block.hashPrevBlock = hashPrev;
+        block.hashMerkleRoot = hashMerkleRoot;
+        block.nTime = nTime;
+        block.nBits = nBits;
+        block.nNonce = nNonce;
         return block.GetHash();
     }
-
 
     std::string ToString() const
     {

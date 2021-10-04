@@ -92,6 +92,13 @@ struct Params {
     unsigned int nStakeTargetSpacing;
     unsigned int nStakeModifierInterval;
     unsigned int nCoinbaseMaturity;
+
+    /**
+     * If true, witness commitments contain a payload equal to a Bitcoin Script solution
+     * to the signet challenge. See BIP325.
+     */
+    bool signet_blocks{false};
+    std::vector<uint8_t> signet_challenge;
 };
 } // namespace Consensus
 
