@@ -484,7 +484,10 @@ public:
         const CBlockHeader& block,
         BlockValidationState& state,
         const CChainParams& chainparams,
-        CBlockIndex** ppindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+        CBlockIndex** ppindex,
+        bool fCheckPow) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+
+    //bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, BlockValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const FlatFilePos* dbp, bool fIsProofOfStake, bool* fNewBlock) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     ~BlockManager() {
         Unload();
@@ -715,7 +718,7 @@ public:
         const CChainParams& chainparams,
         std::shared_ptr<const CBlock> pblock) LOCKS_EXCLUDED(cs_main);
 
-    bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, BlockValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const FlatFilePos* dbp, bool* fNewBlock) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+    bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, BlockValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const FlatFilePos* dbp, bool fIsProofOfStake, bool* fNewBlock) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 
     // Block (dis)connection on a given view:
     DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view);
@@ -750,7 +753,7 @@ public:
      *
      * By default this only executes fully when using the Regtest chain; see: fCheckBlockIndex.
      */
-    void CheckBlockIndex(const Consensus::Params& consensusParams);
+    void CheckBlockIndex();
 
     /** Load the persisted mempool from disk */
     void LoadMempool(const ArgsManager& args);

@@ -2158,12 +2158,12 @@ bool CChainState::ConnectBlock(const CBlock& block, BlockValidationState& state,
     int64_t nStakeReward = 0;
     
     if (pindex->IsProofOfWork() && pindex->nHeight > CUTOFF_POW_BLOCK)
-        return state.DoS(100, error("ConnectBlock() : No proof-of-work allowed anymore (height = %d)", pindex->nHeight));
+        return state.Invalid(BlockValidationResult::BLOCK_POW_CUTOFF, "proof-of-work not allowed anymore", strprintf("ConnectBlock() : No proof-of-work allowed anymore (height = %d)", pindex->nHeight));
 
     // Check proof of stake
     uint32_t nextWork = GetNextTargetRequired(pindex->pprev, block.IsProofOfStake());
     if (block.nBits != nextWork) {
-        return state.DoS(1, error("ConnectBlock() : incorrect %s at height %d (got %d wanted %d)", !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev ? pindex->pprev->nHeight : 0, block.nBits, nextWork), REJECT_INVALID, "bad-diffbits");
+        return state.Invalid(BlockValidationResult::BLOCK_INVALID_WORK, "bad-diffbits", strprintf("ConnectBlock() : incorrect %s at height %d (got %d wanted %d)", !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev ? pindex->pprev->nHeight : 0, block.nBits, nextWork));
     }
 
     // Check it again in case a previous version let a bad block in
@@ -3183,7 +3183,7 @@ bool CChainState::ActivateBestChain(BlockValidationState &state, const CChainPar
         // that the best block hash is non-null.
         if (ShutdownRequested()) break;
     } while (pindexNewTip != pindexMostWork);
-    CheckBlockIndex(chainparams.GetConsensus());
+    CheckBlockIndex();
 
     // Write changes periodically to disk, after relay.
     if (!FlushStateToDisk(chainparams, state, FlushStateMode::PERIODIC)) {
@@ -3325,7 +3325,7 @@ bool CChainState::InvalidateBlock(BlockValidationState& state, const CChainParam
         to_mark_failed = invalid_walk_tip;
     }
 
-    CheckBlockIndex(chainparams.GetConsensus());
+    CheckBlockIndex();
 
     {
         LOCK(cs_main);
@@ -3624,16 +3624,6 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
             return state.Invalid(BlockValidationResult::BLOCK_MUTATED, "bad-txns-duplicate", "duplicate transaction");
     }
 
-    if (block.IsProofOfStake())
-    {
-	// Second transaction must be coinstake, the rest must not be
-	if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
-		return state.DoS(100, error("CheckBlock() : second tx is not coinstake"));
-	for (unsigned int i = 2; i < block.vtx.size(); i++)
-		if (block.vtx[i]->IsCoinStake())
-			return state.DoS(100, error("CheckBlock() : more than one coinstake"));
-    }
-
     // All potential-corruption validation must be done before we do any
     // transaction validation, as otherwise we may mark the header as invalid
     // because we receive the wrong transactions for it.
@@ -3650,15 +3640,21 @@ bool CheckBlock(const CBlock& block, BlockValidationState& state, const Consensu
     for (unsigned int i = 1; i < block.vtx.size(); i++)
         if (block.vtx[i]->IsCoinBase())
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-multiple", "more than one coinbase");
+    
+    if (block.IsProofOfStake()) {
+        // Second transaction must be coinstake, the rest must not be
+        if (block.vtx.empty() || !block.vtx[1]->IsCoinStake())
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cs-txn", "CheckBlock() : second tx is not coinstake");
 
-    // ppcoin: only the second transaction can be the optional coinstake
-    for (unsigned int i = 2; i < block.vtx.size(); i++)
-        if (block.vtx[i]->IsCoinStake())
-            return state.DoS(100, error("CheckBlock() : coinstake in wrong position"));
+        // ppcoin: coinbase output should be empty if proof-of-stake block
+        if (block.vtx[0]->vout.size() != 1 || !block.vtx[0]->vout[0].IsEmpty())
+            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-pos-out", "CheckBlock() : coinbase output not empty for proof-of-stake block");
 
-    // ppcoin: coinbase output should be empty if proof-of-stake block
-    if (block.IsProofOfStake() && (block.vtx[0]->vout.size() != 1 || !block.vtx[0]->vout[0].IsEmpty()))
-        return error("CheckBlock() : coinbase output not empty for proof-of-stake block");
+        // ppcoin: only the second transaction can be the optional coinstake
+        for (unsigned int i = 2; i < block.vtx.size(); i++)
+            if (block.vtx[i]->IsCoinStake())
+                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cs-position", "CheckBlock() : coinstake in wrong position");
+    }
 
     // Check proof-of-stake block signature
     if (fCheckSig && !CheckBlockSignature(block, consensusParams))
@@ -3698,27 +3694,29 @@ bool CheckBlockSignature(const CBlock& block, const Consensus::Params& consensus
         return true;
 
     std::vector<std::vector<unsigned char>> vSolutions;
-    txnouttype whichType;
+    TxoutType whichType;
 
     if (block.IsProofOfStake())
     {
         const CTxOut& txout = block.vtx[1]->vout[1];
-        if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+        whichType = Solver(txout.scriptPubKey, vSolutions);
+        if (whichType == TxoutType::NONSTANDARD)
         {
             LogPrintf("CheckBlockSignature: Bad Block - wrong PoS signature\n");
             return false;
         }
 
-        if (whichType == TX_PUBKEY)
+        if (whichType == TxoutType::PUBKEY)
         {
             std::vector<unsigned char>& vchPubKey = vSolutions[0];
             return CPubKey(vchPubKey).Verify(block.GetHash(), block.vchBlockSig);
         }
-    }else{
+    } else {
         for (unsigned int i = 0; i < block.vtx[0]->vout.size(); i++)
         {
             const CTxOut& txout = block.vtx[0]->vout[i];
-            if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+            whichType = Solver(txout.scriptPubKey, vSolutions);
+            if (whichType == TxoutType::NONSTANDARD)
             {
                 LogPrintf("CheckBlockSignature: Bad Block - wrong PoW signature\n");
                 return false;
@@ -3726,7 +3724,7 @@ bool CheckBlockSignature(const CBlock& block, const Consensus::Params& consensus
 
             typedef std::vector<unsigned char> valtype;
 
-            if (whichType == TX_PUBKEY)
+            if (whichType == TxoutType::PUBKEY)
             {
                 // Verify
                 std::vector<unsigned char>& vchPubKey = vSolutions[0];
@@ -3954,7 +3952,7 @@ static bool ContextualCheckBlock(const CBlock& block, BlockValidationState& stat
     return true;
 }
 
-bool CChainState::AcceptBlockHeader(const CBlockHeader& block, BlockValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fCheckPow)
+bool BlockManager::AcceptBlockHeader(const CBlockHeader& block, BlockValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fCheckPow)
 {
     AssertLockHeld(cs_main);
     // Check for duplicate
@@ -3964,9 +3962,10 @@ bool CChainState::AcceptBlockHeader(const CBlockHeader& block, BlockValidationSt
 
     // ppcoin: Check for duplicate (from ProcessBlock in ppcoin)
     if (m_block_index.count(hash))
-        return state.Invalid(error("AcceptBlockHeader() : already have block %d %s", m_block_index[hash]->nHeight, hash.ToString().c_str()));
+        return error("AcceptBlockHeader() : already have block %d %s", m_block_index[hash]->nHeight, hash.ToString().c_str());
+        
     if (mapOrphanBlocks.count(hash))
-        return state.Invalid(error("AcceptBlockHeader() : already have block (orphan) %s", hash.ToString().c_str()));
+        return error("AcceptBlockHeader() : already have block (orphan) %s", hash.ToString().c_str());
 
     if (hash != chainparams.GetConsensus().hashGenesisBlock) {
         if (miSelf != m_block_index.end()) {
@@ -4057,9 +4056,12 @@ bool ChainstateManager::ProcessNewBlockHeaders(const std::vector<CBlockHeader>& 
     {
         LOCK(cs_main);
         for (const CBlockHeader& header : headers) {
-            CBlockIndex *pindex = nullptr; // Use a temp pindex instead of ppindex to avoid a const_cast
-            if (!g_chainstate.AcceptBlockHeader(header, state, chainparams, &pindex, false)) {
-                if (first_invalid) *first_invalid = header;
+            CBlockIndex* pindex = nullptr; // Use a temp pindex instead of ppindex to avoid a const_cast
+            bool accepted = m_blockman.AcceptBlockHeader(
+                header, state, chainparams, &pindex, false);
+            ActiveChainstate().CheckBlockIndex();
+
+            if (!accepted) {
                 return false;
             }
             if (ppindex) {
@@ -4105,24 +4107,24 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
     CBlockIndex *pindexDummy = nullptr;
     CBlockIndex *&pindex = ppindex ? *ppindex : pindexDummy;
 
-    if (!AcceptBlockHeader(block, state, chainparams, &pindex, !fIsProofOfStake))
+    if (!m_blockman.AcceptBlockHeader(block, state, chainparams, &pindex, !fIsProofOfStake))
         return false;
 
     // Try to process all requested blocks that we don't have, but only
     // process an unrequested block if it's new and has enough work to
     // advance our tip, and isn't too many blocks ahead.
     bool fAlreadyHave = pindex->nStatus & BLOCK_HAVE_DATA;
-    bool fHasMoreOrSameWork = (m_chain.Tip() ? pindex->nChainWork >= m_chain.Tip()->nChainWork : true);
+    bool fHasMoreOrSameWork = (::ChainActive().Tip() ? pindex->nChainWork >= ::ChainActive().Tip()->nChainWork : true);
     // Blocks that are too out-of-order needlessly limit the effectiveness of
     // pruning, because pruning will not delete block files that contain any
     // blocks which are too close in height to the tip.  Apply this test
     // regardless of whether pruning is enabled; it should generally be safe to
     // not process unrequested blocks.
-    bool fTooFarAhead = (pindex->nHeight > int(m_chain.Height() + MIN_BLOCKS_TO_KEEP));
+    bool fTooFarAhead = (pindex->nHeight > int(::ChainActive().Height() + MIN_BLOCKS_TO_KEEP));
 
     // ppcoin: check coinbase timestamp isn't too early
     if (pblock->GetBlockTime() > (int64_t)pblock->vtx[0]->nTime + GetMaxClockDrift(pindex->nHeight))
-        return state.DoS(50, false, REJECT_INVALID, "block-cbtx-early", false, "coinbase timestamp is too early");
+        return state.Invalid(BlockValidationResult::BLOCK_TIME_PAST, "block-cbtx-early", "coinbase timestamp is too early");
 
     // TODO: Decouple this function from the block download logic by removing fRequested
     // This requires some new chain data structure to efficiently look up if a
@@ -4196,7 +4198,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
 
     // Header is valid/has work, merkle tree and segwit merkle tree are good...RELAY NOW
     // (but if it does not build on our best tip, let the SendMessages loop relay it)
-    if (!IsInitialBlockDownload() && m_chain.Tip() == pindex->pprev)
+    if (!::ChainstateActive().IsInitialBlockDownload() && ::ChainActive().Tip() == pindex->pprev)
         GetMainSignals().NewPoWValidBlock(pindex, pblock);
 
     // Write block to history file
@@ -4207,14 +4209,14 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
             state.Error(strprintf("%s: Failed to find position to write new block to disk", __func__));
             return false;
         }
-        ReceivedBlockTransactions(block, pindex, blockPos, chainparams.GetConsensus());
+        CChainState::ReceivedBlockTransactions(block, pindex, blockPos, chainparams.GetConsensus());
     } catch (const std::runtime_error& e) {
         return AbortNode(state, std::string("System error: ") + e.what());
     }
 
-    FlushStateToDisk(chainparams, state, FlushStateMode::NONE);
+    CChainState::FlushStateToDisk(chainparams, state, FlushStateMode::NONE);
 
-    CheckBlockIndex(chainparams.GetConsensus());
+    CChainState::CheckBlockIndex();
 
     return true;
 }
@@ -4982,7 +4984,7 @@ bool CChainState::RewindBlockIndex(const CChainParams& params)
             // no tip due to m_chain being empty!
             PruneBlockIndexCandidates();
 
-            CheckBlockIndex(params.GetConsensus());
+            CheckBlockIndex();
 
             // FlushStateToDisk can possibly read ::ChainActive(). Be conservative
             // and skip it here, we're about to -reindex-chainstate anyway, so
@@ -5195,7 +5197,7 @@ void LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, FlatFi
     LogPrintf("Loaded %i blocks from external file in %dms\n", nLoaded, GetTimeMillis() - nStart);
 }
 
-void CChainState::CheckBlockIndex(const Consensus::Params& consensusParams)
+void CChainState::CheckBlockIndex()
 {
     if (!fCheckBlockIndex) {
         return;
@@ -5249,7 +5251,7 @@ void CChainState::CheckBlockIndex(const Consensus::Params& consensusParams)
         // Begin: actual consistency checks.
         if (pindex->pprev == nullptr) {
             // Genesis block checks.
-            assert(pindex->GetBlockHash() == consensusParams.hashGenesisBlock); // Genesis block's hash must match.
+            assert(pindex->GetBlockHash() == ::Params().GetConsensus().hashGenesisBlock); // Genesis block's hash must match.
             assert(pindex == m_chain.Genesis()); // The current active chain's genesis block must be this block.
         }
         if (!pindex->HaveTxsDownloaded()) assert(pindex->nSequenceId <= 0); // nSequenceId can't be set positive for blocks that aren't linked (negative is used for preciousblock)

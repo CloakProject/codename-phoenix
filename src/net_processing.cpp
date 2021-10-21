@@ -1108,6 +1108,15 @@ bool PeerManager::MaybePunishNodeForBlock(NodeId nodeid, const BlockValidationSt
     case BlockValidationResult::BLOCK_RECENT_CONSENSUS_CHANGE:
     case BlockValidationResult::BLOCK_TIME_FUTURE:
         break;
+    case BlockValidationResult::BLOCK_POW_CUTOFF:
+        Misbehaving(nodeid, 100, message);
+        return true;
+    case BlockValidationResult::BLOCK_TIME_PAST:
+        Misbehaving(nodeid, 50, message);
+        return true;
+    case BlockValidationResult::BLOCK_INVALID_WORK:
+        Misbehaving(nodeid, 1, message);
+        return true;
     }
     if (message != "") {
         LogPrint(BCLog::NET, "peer=%d: %s\n", nodeid, message);
