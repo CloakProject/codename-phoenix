@@ -247,9 +247,8 @@ RecursiveMutex cs_main;
     // bool RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 // } g_chainstate;
 
-CChainState g_chainstate;
-BlockMap& mapOrphanBlocks = g_chainstate.mapOrphanBlocks; // for pos v1
-BlockMap& mapOrphanBlocksByPrev = g_chainstate.mapOrphanBlocksByPrev; // for pos v1
+BlockMap& mapOrphanBlocks = ::ChainstateActive().mapOrphanBlocks;     // for pos v1
+BlockMap& mapOrphanBlocksByPrev = ::ChainstateActive().mapOrphanBlocksByPrev; // for pos v1
 
 CBlockIndex *pindexBestHeader = nullptr;
 Mutex g_best_block_mutex;
@@ -2079,7 +2078,7 @@ unsigned int ComputedMinStake(unsigned int nBase, int64_t nTime, unsigned int nB
 
 void PruneOrphanBlocks()
 {
-    g_chainstate.PruneOrphanBlocks();
+    ::ChainstateActive().PruneOrphanBlocks();
 }
 
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
@@ -4238,7 +4237,7 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
         bool ret = CheckBlock(*pblock, state, chainparams.GetConsensus());
         if (ret) {
             // Store to disk
-            ret = g_chainstate.AcceptBlock(pblock, state, chainparams, &pindex, fForceProcessing, nullptr, fIsProofOfStake, fNewBlock);
+            ret = ::ChainstateActive().AcceptBlock(pblock, state, chainparams, &pindex, fForceProcessing, nullptr, fIsProofOfStake, fNewBlock);
         }
         if (!ret) {
             GetMainSignals().BlockChecked(*pblock, state);
@@ -5139,7 +5138,7 @@ void LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, FlatFi
                     CBlockIndex* pindex = LookupBlockIndex(hash);
                     if (!pindex || (pindex->nStatus & BLOCK_HAVE_DATA) == 0) {
                       BlockValidationState state;
-                      if (g_chainstate.AcceptBlock(pblock, state, chainparams, nullptr, true, dbp, pblock->IsProofOfStake(), nullptr)) {
+                        if (::ChainstateActive().AcceptBlock(pblock, state, chainparams, nullptr, true, dbp, pblock->IsProofOfStake(), nullptr)) {
                           nLoaded++;
                       }
                       if (state.IsError()) {
@@ -5176,7 +5175,7 @@ void LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, FlatFi
                                     head.ToString());
                             LOCK(cs_main);
                             BlockValidationState dummy;
-                            if (g_chainstate.AcceptBlock(pblockrecursive, dummy, chainparams, nullptr, true, &it->second, pblockrecursive->IsProofOfStake(), nullptr))
+                            if (::ChainstateActive().AcceptBlock(pblockrecursive, dummy, chainparams, nullptr, true, &it->second, pblockrecursive->IsProofOfStake(), nullptr))
                             {
                                 nLoaded++;
                                 queue.push_back(pblockrecursive->GetHash());

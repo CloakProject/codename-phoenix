@@ -11,11 +11,10 @@
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <scheduler.h>
+
 #include <sync.h>
 #include <txmempool.h>
-#include <util.h>
 #include <validation.h>
-#include <keystore.h>
 
 #include <future>
 #include <unordered_map>
