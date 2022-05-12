@@ -3409,7 +3409,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             // we have a chain with at least nMinimumChainWork), and we ignore
             // compact blocks with less work than our tip, it is safe to treat
             // reconstructed compact blocks as having been requested.
-            ProcessNewBlock(m_chainparams, pblock, /*fForceProcessing=*/true, pblock->IsProofOfStake(), &fNewBlock);
+            m_chainman.ProcessNewBlock(m_chainparams, pblock, /*fForceProcessing=*/true, pblock->IsProofOfStake(), &fNewBlock);
             if (fNewBlock) {
                 pfrom.nLastBlockTime = GetTime();
             } else {
@@ -3499,7 +3499,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
             // disk-space attacks), but this should be safe due to the
             // protections in the compact block handler -- see related comment
             // in compact block optimistic reconstruction handling.
-            ProcessNewBlock(m_chainparams, pblock, /*fForceProcessing=*/true, pblock->IsProofOfStake(), &fNewBlock);
+            m_chainman.ProcessNewBlock(m_chainparams, pblock, /*fForceProcessing=*/true, pblock->IsProofOfStake(), &fNewBlock);
             if (fNewBlock) {
                 pfrom.nLastBlockTime = GetTime();
             } else {
@@ -3589,10 +3589,10 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                 if (!mapProofOfStake.count(pblock->GetHash())) // add to mapProofOfStake
                     mapProofOfStake.insert(std::make_pair(pblock->GetHash(), hashProofOfStake));
 
-                ProcessNewBlock(Params(), pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+                m_chainman.ProcessNewBlock(Params(), pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
             }
         } else {
-            ProcessNewBlock(Params(), pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
+            m_chainman.ProcessNewBlock(Params(), pblock, forceProcessing, pblock->IsProofOfStake(), &fNewBlock);
         }
         if (fNewBlock) {
             pfrom.nLastBlockTime = GetTime();
