@@ -29,17 +29,26 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     txNew.vout.resize(1);
     txNew.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(9999) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
     txNew.vout[0].SetEmpty();
-	//txNew.vout[0].nValue = genesisReward;
-    //txNew.vout[0].scriptPubKey = genesisOutputScript;
+	// txNew.vout[0].nValue = genesisReward;
+    // txNew.vout[0].scriptPubKey = genesisOutputScript;
 		
     CBlock genesis;
     genesis.nTime    = nTime;
-    genesis.nBits    = nBits;
+    genesis.nBits    = nBits; // 0x1e0fffff = 504365055
     genesis.nNonce   = nNonce;
     genesis.nVersion = nVersion;
     genesis.vtx.push_back(MakeTransactionRef(std::move(txNew)));
     genesis.hashPrevBlock.SetNull();
     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
+
+    //// debug print
+    printf("genesis.GetHash() == %s\n", genesis.GetHash().ToString().c_str());
+    printf("hashGenesisBlock == %s\n", uint256S("0x2d8251121940abce6e28df134c6432e8c5a00d59989a2451806c2778c3a06112").ToString().c_str());
+    printf("genesis.hashMerkleRoot == %s\n", genesis.hashMerkleRoot.ToString().c_str());
+    printf("hashMerkelRootOfficial == %s\n", uint256S("0x1831d9f590f8b705ed996fcaa37ece517cfa6eb619af6738b2606383eab5a619").ToString().c_str());
+    printf("genesis.nTime = %u \n", genesis.nTime);
+    printf("genesis.nNonce = %u \n", genesis.nNonce);
+
     return genesis;
 }
 
