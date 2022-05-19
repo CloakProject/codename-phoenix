@@ -247,8 +247,8 @@ RecursiveMutex cs_main;
     // bool RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
 // } g_chainstate;
 
-BlockMap& mapOrphanBlocks = ::ChainstateActive().mapOrphanBlocks;     // for pos v1
-BlockMap& mapOrphanBlocksByPrev = ::ChainstateActive().mapOrphanBlocksByPrev; // for pos v1
+//BlockMap& mapOrphanBlocks = ::ChainstateActive().mapOrphanBlocks;     // for pos v1
+//BlockMap& mapOrphanBlocksByPrev = ::ChainstateActive().mapOrphanBlocksByPrev; // for pos v1
 
 CBlockIndex *pindexBestHeader = nullptr;
 Mutex g_best_block_mutex;
@@ -2076,10 +2076,10 @@ unsigned int ComputedMinStake(unsigned int nBase, int64_t nTime, unsigned int nB
     return ComputeMaxBits(Params().ProofOfStakeLimit(), nBase, nTime);
 }
 
-void PruneOrphanBlocks()
-{
-    ::ChainstateActive().PruneOrphanBlocks();
-}
+//void PruneOrphanBlocks()
+//{
+//    ::ChainstateActive().PruneOrphanBlocks();
+//}
 
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
@@ -3963,8 +3963,8 @@ bool BlockManager::AcceptBlockHeader(const CBlockHeader& block, BlockValidationS
     if (m_block_index.count(hash))
         return error("AcceptBlockHeader() : already have block %d %s", m_block_index[hash]->nHeight, hash.ToString().c_str());
         
-    if (mapOrphanBlocks.count(hash))
-        return error("AcceptBlockHeader() : already have block (orphan) %s", hash.ToString().c_str());
+    /*if (mapOrphanBlocks.count(hash))
+        return error("AcceptBlockHeader() : already have block (orphan) %s", hash.ToString().c_str());*/
 
     if (hash != chainparams.GetConsensus().hashGenesisBlock) {
         if (miSelf != m_block_index.end()) {
@@ -4177,7 +4177,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
         // Limited duplicity on stake: prevents block flood attack
         // Duplicate stake allowed only when there is orphan child block
         uint256 blockHash = pblock->GetHash();
-        if (setStakeSeen.count(block.GetProofOfStake()) && !mapOrphanBlocksByPrev.count(blockHash))
+        if (setStakeSeen.count(block.GetProofOfStake())/* && !mapOrphanBlocksByPrev.count(blockHash)*/)
             return error("AcceptBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
 
         setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));
@@ -4748,29 +4748,29 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     return true;
 }
 
-void CChainState::PruneOrphanBlocks()
-{
-    if (mapOrphanBlocksByPrev.size() <= (size_t)std::max((int64_t)0, gArgs.GetArg("-maxorphanblocks", DEFAULT_MAX_ORPHAN_BLOCKS)))
-        return;
-
-    // Pick a random orphan block.
-    int pos = GetRandInt(mapOrphanBlocksByPrev.size() - 1);
-    BlockMap::iterator it = mapOrphanBlocksByPrev.begin();
-    while (pos--) it++;
-
-    // As long as this block has other orphans depending on it, move to one of those successors.
-    do {
-        BlockMap::iterator it2 = mapOrphanBlocksByPrev.find(it->second->GetBlockHash());
-        if (it2 == mapOrphanBlocksByPrev.end())
-            break;
-        it = it2;
-    } while (1);
-
-    uint256 hash = it->second->GetBlockHash();
-    delete it->second;
-    mapOrphanBlocksByPrev.erase(it);
-    mapOrphanBlocks.erase(hash);
-}
+//void CChainState::PruneOrphanBlocks()
+//{
+//    if (mapOrphanBlocksByPrev.size() <= (size_t)std::max((int64_t)0, gArgs.GetArg("-maxorphanblocks", DEFAULT_MAX_ORPHAN_BLOCKS)))
+//        return;
+//
+//    // Pick a random orphan block.
+//    int pos = GetRandInt(mapOrphanBlocksByPrev.size() - 1);
+//    BlockMap::iterator it = mapOrphanBlocksByPrev.begin();
+//    while (pos--) it++;
+//
+//    // As long as this block has other orphans depending on it, move to one of those successors.
+//    do {
+//        BlockMap::iterator it2 = mapOrphanBlocksByPrev.find(it->second->GetBlockHash());
+//        if (it2 == mapOrphanBlocksByPrev.end())
+//            break;
+//        it = it2;
+//    } while (1);
+//
+//    uint256 hash = it->second->GetBlockHash();
+//    delete it->second;
+//    mapOrphanBlocksByPrev.erase(it);
+//    mapOrphanBlocks.erase(hash);
+//}
 
 /** Apply the effects of a block on the utxo cache, ignoring that it may already have been applied. */
 bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params)

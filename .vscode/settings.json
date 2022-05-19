@@ -93,5 +93,6 @@
     "format": "cpp",
     "forward_list": "cpp",
     "stop_token": "cpp"
-  }
+  },
+  "cmake.configureOnOpen": false
 }
