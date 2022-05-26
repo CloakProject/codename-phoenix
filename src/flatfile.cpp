@@ -27,7 +27,7 @@ std::string FlatFilePos::ToString() const
 
 fs::path FlatFileSeq::FileName(const FlatFilePos& pos) const
 {
-    return m_dir / strprintf("%s%05u.dat", m_prefix, pos.nFile);
+    return m_dir / strprintf("%s%04u.dat", m_prefix, pos.nFile);
 }
 
 FILE* FlatFileSeq::Open(const FlatFilePos& pos, bool read_only)
@@ -66,7 +66,7 @@ size_t FlatFileSeq::Allocate(const FlatFilePos& pos, size_t add_size, bool& out_
         if (CheckDiskSpace(m_dir, inc_size)) {
             FILE *file = Open(pos);
             if (file) {
-                LogPrintf("Pre-allocating up to position 0x%x in %s%05u.dat\n", new_size, m_prefix, pos.nFile);
+                LogPrintf("Pre-allocating up to position 0x%x in %s%04u.dat\n", new_size, m_prefix, pos.nFile);
                 AllocateFileRange(file, pos.nPos, inc_size);
                 fclose(file);
                 return inc_size;
