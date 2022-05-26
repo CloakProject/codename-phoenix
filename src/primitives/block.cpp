@@ -9,11 +9,14 @@
 #include <hash.h>
 #include <tinyformat.h>
 
+#define BEGIN(a) ((char*)&(a))
+#define END(a) ((char*)&((&(a))[1]))
+
 uint256 CBlockHeader::GetHash() const
 {
-    //uint256 thash = HashX13(BEGIN(nVersion), END(nNonce));
-    //return thash;
-    return SerializeHash(*this);
+    uint256 thash = HashX13(BEGIN(nVersion), END(nNonce));
+    return thash;
+    //return SerializeHash(*this);
 }
 
 std::string CBlock::ToString() const
