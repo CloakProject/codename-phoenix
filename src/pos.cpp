@@ -45,7 +45,9 @@ typedef std::vector<TimeHash> TimestampedHashes;
 
 std::set<std::pair<COutPoint, unsigned int> > setStakeSeen;
 std::map<uint256, uint256> mapProofOfStake;
-std::map<uint256, CBlockIndex*> m_block_index;
+
+// std::map<uint256, CBlockIndex*> m_block_index;
+// 
 // Hard checkpoints of stake modifiers to ensure they are deterministic
 static std::map<int, unsigned int> mapStakeModifierCheckpoints = {{0, 0xfd11f4e7u}};
 
@@ -115,9 +117,9 @@ static bool SelectBlockFromCandidates(
     for (const std::pair<int64_t, arith_uint256>& item : vSortedByTimestamp) 
     {
         //idx++;
-        if (!m_block_index.count(ArithToUint256(item.second)))
+        if (!g_chainman.BlockIndex().count(ArithToUint256(item.second)))
             return error("SelectBlockFromCandidates: failed to find block index for candidate block %s", item.second.ToString().c_str());
-        const CBlockIndex* pindex = m_block_index[ArithToUint256(item.second)];
+        const CBlockIndex* pindex = g_chainman.BlockIndex()[ArithToUint256(item.second)];
         indexes.push_back(pindex);
 
         if (fSelected && pindex->GetBlockTime() > nSelectionIntervalStop)
@@ -286,9 +288,9 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
 static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t& nStakeModifier, int& nStakeModifierHeight, int64_t& nStakeModifierTime, bool fPrintProofOfStake)
 {
     nStakeModifier = 0;
-    if (!m_block_index.count(hashBlockFrom))
+    if (!g_chainman.BlockIndex().count(hashBlockFrom))
         return error("GetKernelStakeModifier() : block not indexed");
-    const CBlockIndex* pindexFrom = m_block_index[hashBlockFrom];
+    const CBlockIndex* pindexFrom = g_chainman.BlockIndex()[hashBlockFrom];
     nStakeModifierHeight = pindexFrom->nHeight;
     nStakeModifierTime = pindexFrom->GetBlockTime();
     int64_t nStakeModifierSelectionInterval = GetStakeModifierSelectionInterval();
@@ -428,7 +430,7 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
         LogPrint(BCLog::ALL, "CheckStakeKernelHash() : using modifier 0x%d at height=%d timestamp=%s for block from height=%d timestamp=%s\n",
             nStakeModifier, nStakeModifierHeight,
             DateTimeStrFormat("%Y-%m-%d %H:%M:%S", nStakeModifierTime).c_str(),
-            m_block_index[pindexPrev->GetBlockHash()]->nHeight,
+            g_chainman.BlockIndex()[pindexPrev->GetBlockHash()]->nHeight,
             DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexPrev->GetBlockTime()).c_str());
 
         LogPrint(BCLog::ALL, "CheckStakeKernelHash() : pass protocol=%s modifier=0x%d nTimeBlockFrom=%u nTxPrevOffset=%u nTimeTxPrev=%u nPrevout=%u nTimeTx=%u hashProof=%s\n",
@@ -495,7 +497,7 @@ bool GetCoinAge(uint64_t& nCoinAge, CTransactionRef tx)
             return false;  // Transaction timestamp violation
 
         // Read block header
-        CBlockIndex* pblockindex = m_block_index[hashPrevBlock];
+        CBlockIndex* pblockindex = g_chainman.BlockIndex()[hashPrevBlock];
         CBlock blockPrev;
         FlatFilePos blockPos = pblockindex->GetBlockPos();
 
@@ -559,7 +561,7 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
             return error("CheckProofOfStake() : script-verify-failed %s", ScriptErrorString(check.GetScriptError()));
     }
 
-    CBlockIndex* pblockindex = m_block_index[hashPrevBlock];
+    CBlockIndex* pblockindex = g_chainman.BlockIndex()[hashPrevBlock];
     CBlock blockPrev;
     FlatFilePos blockPos = pblockindex->GetBlockPos();
 

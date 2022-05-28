@@ -3442,6 +3442,14 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block)
     unsigned int stakeBit = block.GetStakeEntropyBit(pindexNew->nHeight);
     if (!pindexNew->SetStakeEntropyBit(stakeBit))
         LogPrintf("AddToBlockIndex() : SetStakeEntropyBit() failed");
+
+    // ppcoin: record proof-of-stake hash value
+    if (pindexNew->IsProofOfStake())
+    {
+        if (!mapProofOfStake.count(hash))
+            error("AddToBlockIndex() : hashProofOfStake not found in map");
+        pindexNew->hashProofOfStake = UintToArith256(mapProofOfStake[hash]);
+    }
     
     // ppcoin: compute stake modifier
     uint64_t nStakeModifier = 0;
@@ -3454,6 +3462,12 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block)
 
     if (!CheckStakeModifierCheckpoints(pindexNew->nHeight, pindexNew->nStakeModifierChecksum))
         error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016x", pindexNew->nHeight, nStakeModifier);
+
+    // Add to g_chainman.BlockIndex(), previously called mapBlockIndex in legacy
+    BlockMap::iterator mi = g_chainman.BlockIndex().insert(std::make_pair(hash, pindexNew)).first;
+    if (pindexNew->IsProofOfStake())
+        setStakeSeen.insert(std::make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
+    pindexNew->phashBlock = &((*mi).first);
 
     setDirtyBlockIndex.insert(pindexNew);
 
@@ -4122,8 +4136,8 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
     bool fTooFarAhead = (pindex->nHeight > int(::ChainActive().Height() + MIN_BLOCKS_TO_KEEP));
 
     // ppcoin: check coinbase timestamp isn't too early
-    if (pblock->GetBlockTime() > (int64_t)pblock->vtx[0]->nTime + GetMaxClockDrift(pindex->nHeight))
-        return state.Invalid(BlockValidationResult::BLOCK_TIME_PAST, "block-cbtx-early", "coinbase timestamp is too early");
+    /*if (pblock->GetBlockTime() > (int64_t)pblock->vtx[0]->nTime + GetMaxClockDrift(pindex->nHeight))
+        return state.Invalid(BlockValidationResult::BLOCK_TIME_PAST, "block-cbtx-early", "coinbase timestamp is too early");*/
 
     // TODO: Decouple this function from the block download logic by removing fRequested
     // This requires some new chain data structure to efficiently look up if a
@@ -4146,11 +4160,11 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
     }
 
     // ppcoin: check proof-of-stake
-    if (pblock->IsProofOfStake())
+   /* if (pblock->IsProofOfStake())
     {
         std::pair<COutPoint, unsigned int> proofOfStake = pblock->GetProofOfStake();
 
-        CBlockIndex* pindexBest = ::ChainActive().Tip();
+        CBlockIndex* pindexBest = ::ChainActive().Tip();*/
 
         // note: disabled for now due to reliance on sync checkpoints
         /*        
@@ -4168,23 +4182,28 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
         */
 
         // ppcoin: record proof-of-stake hash value
-        if (!mapProofOfStake.count(block.GetHash()))
-            error("AddToBlockIndex() : hashProofOfStake not found in map");        
-        pindex->SetProofOfStake();
-        pindex->prevoutStake = block.vtx[1]->vin[0].prevout;
-        pindex->nStakeTime = block.vtx[1]->nTime;
-    
-        // Limited duplicity on stake: prevents block flood attack
-        // Duplicate stake allowed only when there is orphan child block
-        uint256 blockHash = pblock->GetHash();
-        if (setStakeSeen.count(block.GetProofOfStake())/* && !mapOrphanBlocksByPrev.count(blockHash)*/)
-            return error("AcceptBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
+        // TODO: Cloak - is this supposed to be here as well? [anorak]
 
-        setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));
+        /*if (!mapProofOfStake.count(block.GetHash()))
+            error("AcceptBlock() : hashProofOfStake not found in map");*/
+
+        /*pindex->SetProofOfStake();
+        pindex->prevoutStake = block.vtx[1]->vin[0].prevout;
+        pindex->nStakeTime = block.vtx[1]->nTime;*/
+    
+        // TODO: Cloak - is this supposed to be here? [anorak]
+        // 
+        //// Limited duplicity on stake: prevents block flood attack
+        //// Duplicate stake allowed only when there is orphan child block
+        //uint256 blockHash = pblock->GetHash();
+        //if (setStakeSeen.count(block.GetProofOfStake())/* && !mapOrphanBlocksByPrev.count(blockHash)*/)
+        //    return error("AcceptBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
+
+        //setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));
 
         // use PoS hash for proof
-        pindex->hashProofOfStake = UintToArith256(mapProofOfStake[block.GetHash()]);
-    }
+        // pindex->hashProofOfStake = UintToArith256(mapProofOfStake[block.GetHash()]);
+    //}
     
     if (!CheckBlock(block, state, chainparams.GetConsensus()) ||
         !ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindex->pprev)) {
@@ -4199,6 +4218,111 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
     // (but if it does not build on our best tip, let the SendMessages loop relay it)
     if (!::ChainstateActive().IsInitialBlockDownload() && ::ChainActive().Tip() == pindex->pprev)
         GetMainSignals().NewPoWValidBlock(pindex, pblock);
+
+
+
+    // LEGACY CHECKS
+
+    // Check for duplicate
+    uint256 hash = block.GetHash();
+    if (g_chainman.BlockIndex().count(hash))
+        return error("AcceptBlock() : block already in mapBlockIndex");
+
+    // Get prev block index
+    BlockMap::iterator mi = g_chainman.BlockIndex().find(block.hashPrevBlock);
+    if (mi == g_chainman.BlockIndex().end())
+        LogPrintf("ERROR: %s: prev block not found\n", __func__);
+        return state.Invalid(BlockValidationResult::BLOCK_MISSING_PREV, "prev-blk-not-found");
+    CBlockIndex* pindexPrev = (*mi).second;
+    int nHeight = pindexPrev->nHeight + 1;
+
+    if (block.IsProofOfWork() && nHeight > CUTOFF_POW_BLOCK) //
+        LogPrintf("ERROR: %s : No proof-of-work allowed anymore (height = %d)\n", __func__, nHeight);
+        return state.Invalid(BlockValidationResult::BLOCK_POW_CUTOFF, "prev-blk-not-found");
+
+    // Check proof-of-work or proof-of-stake
+    uint32_t nextWork = GetNextTargetRequired(pindex->pprev, block.IsProofOfStake());
+    if (block.nBits != nextWork) {
+        LogPrintf("ERROR: %s : incorrect %s at height %d (got %d wanted %d)\n", __func__, !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev ? pindex->pprev->nHeight : 0, block.nBits, nextWork);
+        return state.Invalid(BlockValidationResult::BLOCK_INVALID_WORK, "bad-diffbits");
+    }
+
+    // TODO: commented out in legacy?? [anorak]
+    // Check timestamp against prev
+    //if (GetBlockTime() <= pindexPrev->GetMedianTimePast() || GetBlockTime() + nMaxClockDrift < pindexPrev->GetBlockTime())
+    //    return error("AcceptBlock() : block's timestamp is too early");
+    
+    // Check timestamp
+    if (block.GetBlockTime() > GetAdjustedTime() + GetMaxClockDrift(nHeight))
+        return error("ERROR: %s : block timestamp too far in the future\n", __func__);
+
+    // Check coinbase timestamp
+    if (block.GetBlockTime() > (int64_t)block.vtx[0]->nTime + GetMaxClockDrift(nHeight))
+        LogPrintf("ERROR: %s : coinbase timestamp is too early\n", __func__);
+        return state.Invalid(BlockValidationResult::BLOCK_TIME_PAST, "block-cbtx-early");
+
+
+
+    /* TODO: WIP - keep updating these AcceptBlock checks
+
+    // Check that all transactions are finalized
+    BOOST_FOREACH (const CTransaction& tx, vtx)
+        if (!tx.IsFinal(nHeight, GetBlockTime()))
+            return DoS(10, error("AcceptBlock() : contains a non-final transaction"));
+
+    // Check that the block chain matches the known block chain up to a checkpoint
+    if (!Checkpoints::CheckHardened(nHeight, hash))
+        return DoS(100, error("AcceptBlock() : rejected by hardened checkpoint lock-in at %d", nHeight));
+
+    // ppcoin: check that the block satisfies synchronized checkpoint
+    if (!Checkpoints::CheckSync(hash, pindexPrev)) {
+        if (!GetBoolArg("-nosynccheckpoints", false)) {
+            return error("AcceptBlock() : rejected by synchronized checkpoint");
+        } else {
+            strMiscWarning = _("WARNING: syncronized checkpoint violation detected, but skipped!");
+        }
+    }
+
+    // Reject block.nVersion < 3 blocks since 95% threshold on mainNet and always on testNet:
+    if (nVersion < 3 && ((!fTestNet && nHeight > 14060) || (fTestNet && nHeight > 0)))
+        return error("CheckBlock() : rejected nVersion < 3 block");
+
+    // Enforce rule that the coinbase starts with serialized block height
+    CScript expect = CScript() << nHeight;
+    if (!std::equal(expect.begin(), expect.end(), vtx[0].vin[0].scriptSig.begin()))
+        return DoS(100, error("AcceptBlock() : block height mismatch in coinbase"));
+
+    // Enforce rule that staking must be either split or merge
+    if (nVersion > 4) {
+        // if 15,120 of the last 20,160 blocks (75%) are version 5 or greater (51/100 if testnet):
+        if ((!fTestNet && CBlockIndex::IsSuperMajority(5, pindexPrev, 15120, 20160)) ||
+            (fTestNet && CBlockIndex::IsSuperMajority(5, pindexPrev, 51, 100))) {
+            printf(">>>>>>>>> ISM75 activation of version 5 achieved <<<<<<<<<\n");
+
+            // cloak: coinstake should be a proper split or merge stake
+            if (!((vtx[1].vin.size() == 1 && vtx[1].vout.size() == 3) || //  it's a split stake (one input, empty + 2 split outputs) OR
+                  (vtx[1].vin.size() > 1 && vtx[1].vout.size() == 2)))   //  it's a merge stake (multiple inputs, empty + 1 merge output)
+                return DoS(100, error("AcceptBlock() : rejected, coistake should be a split or a merge"));
+        }
+    }
+
+    // Reject block.nVersion=4 blocks when 85% (75% on testnet) of the network has upgraded:
+    if (nVersion < 5) {
+        if ((!fTestNet && CBlockIndex::IsSuperMajority(5, pindexPrev, 17136, 20160)) ||
+            (fTestNet && CBlockIndex::IsSuperMajority(5, pindexPrev, 75, 100))) {
+            return error("AcceptBlock() : rejected nVersion=4 block");
+        }
+
+        if (!((vtx[1].vin.size() == 1 && vtx[1].vout.size() == 3) || //  it's a split stake (one input, empty + 2 split outputs) OR
+              (vtx[1].vin.size() > 1 && vtx[1].vout.size() == 2)))   //  it's a merge stake (multiple inputs, empty + 1 merge output)
+            printf(">>>>>>> Engineered block received :( \n");
+    }
+    */
+
+
+
+
+
 
     // Write block to history file
     if (fNewBlock) *fNewBlock = true;

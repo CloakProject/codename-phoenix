@@ -1115,7 +1115,7 @@ bool PeerManager::MaybePunishNodeForBlock(NodeId nodeid, const BlockValidationSt
         Misbehaving(nodeid, 50, message);
         return true;
     case BlockValidationResult::BLOCK_INVALID_WORK:
-        Misbehaving(nodeid, 1, message);
+        Misbehaving(nodeid, 3, message);
         return true;
     }
     if (message != "") {
