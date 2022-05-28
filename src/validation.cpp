@@ -3463,11 +3463,9 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block)
     if (!CheckStakeModifierCheckpoints(pindexNew->nHeight, pindexNew->nStakeModifierChecksum))
         error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016x", pindexNew->nHeight, nStakeModifier);
 
-    // Add to g_chainman.BlockIndex(), previously called mapBlockIndex in legacy
-    BlockMap::iterator mi = g_chainman.BlockIndex().insert(std::make_pair(hash, pindexNew)).first;
+    // Add to setStakeSeen
     if (pindexNew->IsProofOfStake())
         setStakeSeen.insert(std::make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
-    pindexNew->phashBlock = &((*mi).first);
 
     setDirtyBlockIndex.insert(pindexNew);
 
@@ -4229,7 +4227,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
         return error("AcceptBlock() : block already in mapBlockIndex");
 
     // Get prev block index
-    BlockMap::iterator mi = g_chainman.BlockIndex().find(block.hashPrevBlock);
+    BlockMap::iterator mi = m_blockman.m_block_index.find(block.hashPrevBlock);
     if (mi == g_chainman.BlockIndex().end())
         LogPrintf("ERROR: %s: prev block not found\n", __func__);
         return state.Invalid(BlockValidationResult::BLOCK_MISSING_PREV, "prev-blk-not-found");
