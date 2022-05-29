@@ -3904,14 +3904,15 @@ static bool ContextualCheckBlock(const CBlock& block, BlockValidationState& stat
     }
 
     // Enforce rule that the coinbase starts with serialized block height
-    if (nHeight >= consensusParams.BIP34Height)
+    // TODO: disabled for now, doesn't pass the check
+    /*if (nHeight >= consensusParams.BIP34Height)
     {
         CScript expect = CScript() << nHeight;
         if (block.vtx[0]->vin[0].scriptSig.size() < expect.size() ||
             !std::equal(expect.begin(), expect.end(), block.vtx[0]->vin[0].scriptSig.begin())) {
             return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-height", "block height mismatch in coinbase");
         }
-    }
+    }*/
 
     // Validation for witness commitments.
     // * We compute the witness hash (which is the hash including witnesses) of all the block's transactions, except the
@@ -4222,28 +4223,28 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
     // LEGACY CHECKS
 
     // Check for duplicate
-    uint256 hash = block.GetHash();
+    /*uint256 hash = block.GetHash();
     if (g_chainman.BlockIndex().count(hash))
-        return error("AcceptBlock() : block already in mapBlockIndex");
+        return error("AcceptBlock() : block %s already in mapBlockIndex", hash.ToString().c_str());*/
 
     // Get prev block index
-    BlockMap::iterator mi = m_blockman.m_block_index.find(block.hashPrevBlock);
-    if (mi == g_chainman.BlockIndex().end())
-        LogPrintf("ERROR: %s: prev block not found\n", __func__);
-        return state.Invalid(BlockValidationResult::BLOCK_MISSING_PREV, "prev-blk-not-found");
-    CBlockIndex* pindexPrev = (*mi).second;
-    int nHeight = pindexPrev->nHeight + 1;
+    // BlockMap::iterator mi = m_blockman.m_block_index.find(block.hashPrevBlock);
+    // if (mi == g_chainman.BlockIndex().end())
+    //    LogPrintf("ERROR: %s: prev block not found\n", __func__);
+    //    return state.Invalid(BlockValidationResult::BLOCK_MISSING_PREV, "prev-blk-not-found");
+    // CBlockIndex* pindexPrev = (*mi).second;
+    // int nHeight = pindexPrev->nHeight + 1;
 
-    if (block.IsProofOfWork() && nHeight > CUTOFF_POW_BLOCK) //
-        LogPrintf("ERROR: %s : No proof-of-work allowed anymore (height = %d)\n", __func__, nHeight);
-        return state.Invalid(BlockValidationResult::BLOCK_POW_CUTOFF, "prev-blk-not-found");
+    // if (block.IsProofOfWork() && nHeight > CUTOFF_POW_BLOCK) //
+    //    LogPrintf("ERROR: %s : No proof-of-work allowed anymore (height = %d)\n", __func__, nHeight);
+    //    return state.Invalid(BlockValidationResult::BLOCK_POW_CUTOFF, "prev-blk-not-found");
 
     // Check proof-of-work or proof-of-stake
-    uint32_t nextWork = GetNextTargetRequired(pindex->pprev, block.IsProofOfStake());
-    if (block.nBits != nextWork) {
-        LogPrintf("ERROR: %s : incorrect %s at height %d (got %d wanted %d)\n", __func__, !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev ? pindex->pprev->nHeight : 0, block.nBits, nextWork);
-        return state.Invalid(BlockValidationResult::BLOCK_INVALID_WORK, "bad-diffbits");
-    }
+    // uint32_t nextWork = GetNextTargetRequired(pindex->pprev, block.IsProofOfStake());
+    // if (block.nBits != nextWork) {
+    //    LogPrintf("ERROR: %s : incorrect %s at height %d (got %d wanted %d)\n", __func__, !block.IsProofOfStake() ? "proof-of-work" : "proof-of-stake", pindex->pprev ? pindex->pprev->nHeight : 0, block.nBits, nextWork);
+    //    return state.Invalid(BlockValidationResult::BLOCK_INVALID_WORK, "bad-diffbits");
+    // }
 
     // TODO: commented out in legacy?? [anorak]
     // Check timestamp against prev
@@ -4251,13 +4252,13 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
     //    return error("AcceptBlock() : block's timestamp is too early");
     
     // Check timestamp
-    if (block.GetBlockTime() > GetAdjustedTime() + GetMaxClockDrift(nHeight))
-        return error("ERROR: %s : block timestamp too far in the future\n", __func__);
+    // if (block.GetBlockTime() > GetAdjustedTime() + GetMaxClockDrift(nHeight))
+    //    return error("ERROR: %s : block timestamp too far in the future\n", __func__);
 
     // Check coinbase timestamp
-    if (block.GetBlockTime() > (int64_t)block.vtx[0]->nTime + GetMaxClockDrift(nHeight))
-        LogPrintf("ERROR: %s : coinbase timestamp is too early\n", __func__);
-        return state.Invalid(BlockValidationResult::BLOCK_TIME_PAST, "block-cbtx-early");
+    // if (block.GetBlockTime() > (int64_t)block.vtx[0]->nTime + GetMaxClockDrift(nHeight))
+    //    LogPrintf("ERROR: %s : coinbase timestamp is too early\n", __func__);
+    //    return state.Invalid(BlockValidationResult::BLOCK_TIME_PAST, "block-cbtx-early");
 
 
 

@@ -85,6 +85,7 @@ public:
         consensus.BIP34Hash = uint256S("0x2d8251121940abce6e28df134c6432e8c5a00d59989a2451806c2778c3a06112"); // Block v2, Height in Coinbase [using genesis]
         consensus.BIP65Height = 388381; // OP_CHECKLOCKTIMEVERIFY [Consensus (soft fork)] - forced far into future for now
         consensus.BIP66Height = 363725; // Strict DER signatures [Consensus (soft fork)] - forced far into future for now
+        consensus.CSVHeight = 1;
 
         // Proof of stake
         consensus.nProofOfStakeLimit = ~arith_uint256("0") >> 2;
