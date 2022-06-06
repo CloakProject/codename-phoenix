@@ -445,6 +445,8 @@ public:
       * instead of putting things in this set.
       */
     std::set<CBlockIndex*> m_failed_blocks;
+    BlockMap mapOrphanBlocks; // for pos v1
+    BlockMap mapOrphanBlocksByPrev; // for pos v1
 
     /**
      * All pairs A->B, where A (or one of its ancestors) misses transactions, but B has transactions.

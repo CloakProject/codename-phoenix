@@ -2076,10 +2076,10 @@ unsigned int ComputedMinStake(unsigned int nBase, int64_t nTime, unsigned int nB
     return ComputeMaxBits(Params().ProofOfStakeLimit(), nBase, nTime);
 }
 
-//void PruneOrphanBlocks()
-//{
-//    ::ChainstateActive().PruneOrphanBlocks();
-//}
+void PruneOrphanBlocks()
+{
+    ::ChainstateActive().PruneOrphanBlocks();
+}
 
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
@@ -2113,9 +2113,15 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
     // ppcoin: retarget with exponential moving toward target spacing
     arith_uint256 bnNew;
     bnNew.SetCompact(pindexPrev->nBits);
+
+    // TODO: why do we need 512 here??? added by rzr [anorak]
     arith_uint512 bnNew512(bnNew.GetHex());
-    int64_t nTargetSpacing = fProofOfStake ? Params().GetConsensus().nStakeTargetSpacing : std::min(Params().GetConsensus().nPowTargetSpacing, (int64_t)Params().GetConsensus().nStakeTargetSpacing * (1 + pindexLast->nHeight - pindexPrev->nHeight));
+
+    int64_t nTargetSpacing = fProofOfStake ? Params().GetConsensus().nStakeTargetSpacing : std::min(Params().GetConsensus().nPowTargetSpacing, (int64_t)Params().GetConsensus().nStakeTargetSpacing * (1 + (int64_t)pindexLast->nHeight - (int64_t)pindexPrev->nHeight));
+    // nTargetSpacing = 60
     int64_t nInterval = Params().GetConsensus().nPowTargetTimespan / nTargetSpacing;
+    // nInterval = 60 * 30 / 60 = 30
+    // nActualSpacing = 1
     bnNew512 *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
     bnNew512 /= ((nInterval + 1) * nTargetSpacing);
 
@@ -2131,6 +2137,30 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
         bnNew512 = bnTargetLimit512;
     bnNew = arith_uint256::Arith256FromArith512(bnNew512);
     return bnNew.GetCompact();
+
+    /*
+    // LEGACY CODE - TODO: compare & investigate why new code is returning wrong bits (got 540799124=203BF094 wanted 541065215=203FFFFF)
+
+    CBigNum bnNew;
+    bnNew.SetCompact(pindexPrev->nBits);
+
+    int64 nTargetSpacing = fProofOfStake? nStakeTargetSpacing : min(nTargetSpacingWorkMax, (int64) nStakeTargetSpacing * (1 + pindexLast->nHeight - pindexPrev->nHeight));
+    int64 nInterval = nTargetTimespan / nTargetSpacing;
+    bnNew *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
+    bnNew /= ((nInterval + 1) * nTargetSpacing);
+
+    
+    //printf(">> Height = %d, fProofOfStake = %d, nInterval = %"PRI64d", nTargetSpacing = %"PRI64d", nActualSpacing = %"PRI64d"\n",
+    //    pindexPrev->nHeight, fProofOfStake, nInterval, nTargetSpacing, nActualSpacing);
+    //printf(">> pindexPrev->GetBlockTime() = %"PRI64d", pindexPrev->nHeight = %d, pindexPrevPrev->GetBlockTime() = %"PRI64d", pindexPrevPrev->nHeight = %d\n",
+    //    pindexPrev->GetBlockTime(), pindexPrev->nHeight, pindexPrevPrev->GetBlockTime(), pindexPrevPrev->nHeight);
+    
+
+    if (bnNew.getuint256() > bnTargetLimit)
+        bnNew = CBigNum(bnTargetLimit);
+
+    return bnNew.GetCompact();
+    */
 }
 
 static int64_t nTimeCheck = 0;
@@ -3976,8 +4006,8 @@ bool BlockManager::AcceptBlockHeader(const CBlockHeader& block, BlockValidationS
     if (m_block_index.count(hash))
         return error("AcceptBlockHeader() : already have block %d %s", m_block_index[hash]->nHeight, hash.ToString().c_str());
         
-    /*if (mapOrphanBlocks.count(hash))
-        return error("AcceptBlockHeader() : already have block (orphan) %s", hash.ToString().c_str());*/
+    if (mapOrphanBlocks.count(hash))
+        return error("AcceptBlockHeader() : already have block (orphan) %s", hash.ToString().c_str());
 
     if (hash != chainparams.GetConsensus().hashGenesisBlock) {
         if (miSelf != m_block_index.end()) {
@@ -4159,11 +4189,11 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
     }
 
     // ppcoin: check proof-of-stake
-   /* if (pblock->IsProofOfStake())
+    if (pblock->IsProofOfStake())
     {
         std::pair<COutPoint, unsigned int> proofOfStake = pblock->GetProofOfStake();
 
-        CBlockIndex* pindexBest = ::ChainActive().Tip();*/
+        CBlockIndex* pindexBest = ::ChainActive().Tip();
 
         // note: disabled for now due to reliance on sync checkpoints
         /*        
@@ -4181,28 +4211,25 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
         */
 
         // ppcoin: record proof-of-stake hash value
-        // TODO: Cloak - is this supposed to be here as well? [anorak]
 
-        /*if (!mapProofOfStake.count(block.GetHash()))
+        /* if (!mapProofOfStake.count(block.GetHash()))
             error("AcceptBlock() : hashProofOfStake not found in map");*/
 
-        /*pindex->SetProofOfStake();
+        pindex->SetProofOfStake();
         pindex->prevoutStake = block.vtx[1]->vin[0].prevout;
-        pindex->nStakeTime = block.vtx[1]->nTime;*/
+        pindex->nStakeTime = block.vtx[1]->nTime;
     
-        // TODO: Cloak - is this supposed to be here? [anorak]
-        // 
-        //// Limited duplicity on stake: prevents block flood attack
-        //// Duplicate stake allowed only when there is orphan child block
-        //uint256 blockHash = pblock->GetHash();
-        //if (setStakeSeen.count(block.GetProofOfStake())/* && !mapOrphanBlocksByPrev.count(blockHash)*/)
-        //    return error("AcceptBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
+        // Limited duplicity on stake: prevents block flood attack
+        // Duplicate stake allowed only when there is orphan child block
+        uint256 blockHash = pblock->GetHash();
+        if (setStakeSeen.count(block.GetProofOfStake()) && !mapOrphanBlocksByPrev.count(blockHash))
+            return error("AcceptBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
 
-        //setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));
+        setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));
 
         // use PoS hash for proof
-        // pindex->hashProofOfStake = UintToArith256(mapProofOfStake[block.GetHash()]);
-    //}
+        pindex->hashProofOfStake = UintToArith256(mapProofOfStake[block.GetHash()]);
+    }
     
     if (!CheckBlock(block, state, chainparams.GetConsensus()) ||
         !ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindex->pprev)) {
@@ -4871,29 +4898,29 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
     return true;
 }
 
-//void CChainState::PruneOrphanBlocks()
-//{
-//    if (mapOrphanBlocksByPrev.size() <= (size_t)std::max((int64_t)0, gArgs.GetArg("-maxorphanblocks", DEFAULT_MAX_ORPHAN_BLOCKS)))
-//        return;
-//
-//    // Pick a random orphan block.
-//    int pos = GetRandInt(mapOrphanBlocksByPrev.size() - 1);
-//    BlockMap::iterator it = mapOrphanBlocksByPrev.begin();
-//    while (pos--) it++;
-//
-//    // As long as this block has other orphans depending on it, move to one of those successors.
-//    do {
-//        BlockMap::iterator it2 = mapOrphanBlocksByPrev.find(it->second->GetBlockHash());
-//        if (it2 == mapOrphanBlocksByPrev.end())
-//            break;
-//        it = it2;
-//    } while (1);
-//
-//    uint256 hash = it->second->GetBlockHash();
-//    delete it->second;
-//    mapOrphanBlocksByPrev.erase(it);
-//    mapOrphanBlocks.erase(hash);
-//}
+void CChainState::PruneOrphanBlocks()
+{
+    if (mapOrphanBlocksByPrev.size() <= (size_t)std::max((int64_t)0, gArgs.GetArg("-maxorphanblocks", DEFAULT_MAX_ORPHAN_BLOCKS)))
+        return;
+
+    // Pick a random orphan block.
+    int pos = GetRandInt(mapOrphanBlocksByPrev.size() - 1);
+    BlockMap::iterator it = mapOrphanBlocksByPrev.begin();
+    while (pos--) it++;
+
+    // As long as this block has other orphans depending on it, move to one of those successors.
+    do {
+        BlockMap::iterator it2 = mapOrphanBlocksByPrev.find(it->second->GetBlockHash());
+        if (it2 == mapOrphanBlocksByPrev.end())
+            break;
+        it = it2;
+    } while (1);
+
+    uint256 hash = it->second->GetBlockHash();
+    delete it->second;
+    mapOrphanBlocksByPrev.erase(it);
+    mapOrphanBlocks.erase(hash);
+}
 
 /** Apply the effects of a block on the utxo cache, ignoring that it may already have been applied. */
 bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params)

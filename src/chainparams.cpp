@@ -42,12 +42,12 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
 
     //// debug print
-    printf("genesis.GetHash() == %s\n", genesis.GetHash().ToString().c_str());
+    /*printf("genesis.GetHash() == %s\n", genesis.GetHash().ToString().c_str());
     printf("hashGenesisBlock == %s\n", uint256S("0x2d8251121940abce6e28df134c6432e8c5a00d59989a2451806c2778c3a06112").ToString().c_str());
     printf("genesis.hashMerkleRoot == %s\n", genesis.hashMerkleRoot.ToString().c_str());
     printf("hashMerkelRootOfficial == %s\n", uint256S("0x1831d9f590f8b705ed996fcaa37ece517cfa6eb619af6738b2606383eab5a619").ToString().c_str());
     printf("genesis.nTime = %u \n", genesis.nTime);
-    printf("genesis.nNonce = %u \n", genesis.nNonce);
+    printf("genesis.nNonce = %u \n", genesis.nNonce);*/
 
     return genesis;
 }
@@ -98,7 +98,7 @@ public:
         // Proof of work
         consensus.nProofOfWorkLimit = ~arith_uint256("0") >> 20;
         consensus.nPowTargetTimespan = 60 * 30; // 30 blocks
-        consensus.nPowTargetSpacing = 3 * consensus.nStakeTargetSpacing;
+        consensus.nPowTargetSpacing = 3 * (int64_t)consensus.nStakeTargetSpacing;
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
         
