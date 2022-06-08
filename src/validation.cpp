@@ -3493,10 +3493,6 @@ CBlockIndex* BlockManager::AddToBlockIndex(const CBlockHeader& block)
     if (!CheckStakeModifierCheckpoints(pindexNew->nHeight, pindexNew->nStakeModifierChecksum))
         error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016x", pindexNew->nHeight, nStakeModifier);
 
-    // Add to setStakeSeen
-    if (pindexNew->IsProofOfStake())
-        setStakeSeen.insert(std::make_pair(pindexNew->prevoutStake, pindexNew->nStakeTime));
-
     setDirtyBlockIndex.insert(pindexNew);
 
     return pindexNew;
@@ -4212,7 +4208,7 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
 
         // ppcoin: record proof-of-stake hash value
 
-        /* if (!mapProofOfStake.count(block.GetHash()))
+        /*if (!mapProofOfStake.count(block.GetHash()))
             error("AcceptBlock() : hashProofOfStake not found in map");*/
 
         pindex->SetProofOfStake();
@@ -4346,7 +4342,38 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
     */
 
 
+/*
+        // If don't already have its previous block, shunt it off to holding area until we get it
+        if (!mapBlockIndex.count(pblock->hashPrevBlock))
+        {
+            printf("ProcessBlock: ORPHAN BLOCK, prev=%s\n", pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+            CBlock* pblock2 = new CBlock(*pblock);
+            // ppcoin: check proof-of-stake
+            if (pblock2->IsProofOfStake())
+            {
+                // Limited duplicity on stake: prevents block flood attack
+                // Duplicate stake allowed only when there is orphan child block
+                if (setStakeSeenOrphan.count(pblock2->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash) && !Checkpoints::WantedByPendingSyncCheckpoint(hash))
+                    return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for orphan block %s", pblock2->GetProofOfStake().first.ToString().c_str(), pblock2->GetProofOfStake().second, hash.ToString().c_str());
+                else
+                    setStakeSeenOrphan.insert(pblock2->GetProofOfStake());
+            }
+            mapOrphanBlocks.insert(make_pair(hash, pblock2));
+            mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
 
+            // TODO: move this into net_processing under [if (msg_type == NetMsgType::BLOCK)]
+            // Ask this guy to fill in what we're missing
+            if (pfrom)
+            {
+                pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblock2));
+                // ppcoin: getblocks may not obtain the ancestor block rejected
+                // earlier by duplicate-stake check so we ask for it again directly
+                if (!IsInitialBlockDownload())
+                    pfrom->AskFor(CInv(MSG_BLOCK, WantedByOrphan(pblock2)));
+            }
+            return true;
+        }
+        */
 
 
 
