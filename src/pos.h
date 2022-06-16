@@ -30,6 +30,7 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex);
 
 /* Proof of Stake constants */
 extern std::set<std::pair<COutPoint, unsigned int> > setStakeSeen;
+extern std::set<std::pair<COutPoint, unsigned int> > setStakeSeenOrphan;
 extern std::map<uint256, uint256> mapProofOfStake;
 //extern std::map<int, unsigned int> mapStakeModifierCheckpoints;
 

@@ -445,8 +445,8 @@ public:
       * instead of putting things in this set.
       */
     std::set<CBlockIndex*> m_failed_blocks;
-    BlockMap mapOrphanBlocks; // for pos v1
-    BlockMap mapOrphanBlocksByPrev; // for pos v1
+    std::map<uint256, CBlock*> mapOrphanBlocks; // for pos v1
+    std::map<uint256, CBlock*> mapOrphanBlocksByPrev; // for pos v1
 
     /**
      * All pairs A->B, where A (or one of its ancestors) misses transactions, but B has transactions.
@@ -595,8 +595,8 @@ protected:
     std::unique_ptr<CoinsViews> m_coins_views;
 
 public:
-    BlockMap mapOrphanBlocks; // for pos v1
-    BlockMap mapOrphanBlocksByPrev; // for pos v1
+    //BlockMap mapOrphanBlocks; // for pos v1
+    //BlockMap mapOrphanBlocksByPrev; // for pos v1
 
     std::multimap<CBlockIndex*, CBlockIndex*> mapBlocksUnlinked;
     CBlockIndex *pindexBestInvalid = nullptr;

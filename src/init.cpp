@@ -1810,10 +1810,10 @@ bool AppInitMain(const util::Ref& context, NodeContext& node, interfaces::BlockA
     fFeeEstimatesInitialized = true;
 
     // ********************************************************* Step 8: start indexers
-    if (args.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
+    //if (args.GetBoolArg("-txindex", DEFAULT_TXINDEX)) {
         g_txindex = MakeUnique<TxIndex>(nTxIndexCache, false, fReindex);
         g_txindex->Start();
-    }
+    //}
 
     for (const auto& filter_type : g_enabled_filter_types) {
         InitBlockFilterIndex(filter_type, filter_index_cache, false, fReindex);

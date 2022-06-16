@@ -3699,6 +3699,7 @@ void CWallet::CreateCoinStake(unsigned int nBits, int64_t nSearchInterval, CTran
         CTransactionRef txPrev;
 
         // get input tx and block ref containing for block including input tx
+        // TODO: need mempool into GetTx
         if (!GetTransaction(nullptr, nullptr, hashPrevTx, Params().GetConsensus(), hashPrevBlock)) {
             result = false;
             error("CreateCoinStake() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download

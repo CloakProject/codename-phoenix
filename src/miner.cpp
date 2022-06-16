@@ -771,7 +771,9 @@ void Staker::CloakStaker(const CChainParams& chainparams)
     try
     {
         unsigned int nExtraNonce = 0;
-
+        // Throw an error if no script was provided.  This can happen
+        // due to some internal error but also if the keypool is empty.
+        // In the latter case, already the pointer is NULL.
 		if (!coinbaseScript || coinbaseScript->reserveScript.empty())
             throw std::runtime_error("No coinbase script available (staking requires a wallet)");
 

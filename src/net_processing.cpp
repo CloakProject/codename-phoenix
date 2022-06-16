@@ -2285,6 +2285,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
                                          const std::chrono::microseconds time_received,
                                          const std::atomic<bool>& interruptMsgProc)
 {
+    //LogPrintf("received: %s (%u bytes) peer=%d\n", SanitizeString(msg_type), vRecv.size(), pfrom.GetId());
     LogPrint(BCLog::NET, "received: %s (%u bytes) peer=%d\n", SanitizeString(msg_type), vRecv.size(), pfrom.GetId());
     if (gArgs.IsArgSet("-dropmessagestest") && GetRand(gArgs.GetArg("-dropmessagestest", 0)) == 0)
     {
@@ -2505,8 +2506,8 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
 
     if (pfrom.nVersion == 0) {
         // Must have a version message before anything else
-        Misbehaving(pfrom.GetId(), 1, "non-version message before version handshake");
-        return;
+        // Misbehaving(pfrom.GetId(), 1, "non-version message before version handshake");
+        // return;
     }
 
     // At this point, the outgoing message serialization version can't change.
@@ -2581,7 +2582,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
 
     if (!pfrom.fSuccessfullyConnected) {
         LogPrint(BCLog::NET, "Unsupported message \"%s\" prior to verack from peer=%d\n", SanitizeString(msg_type), pfrom.GetId());
-        return;
+        //return;
     }
 
     if (msg_type == NetMsgType::ADDR || msg_type == NetMsgType::ADDRV2) {
@@ -3565,25 +3566,25 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat
         bool fNewBlock = false;
 
         // ppcoin: prune excessive orphan blocks
-        // PruneOrphanBlocks();
+        PruneOrphanBlocks();
 
         // ppcoin: verify hash target and signature of coinstake tx
         // TODO: implement PoS properly
         if (pblock->IsProofOfStake()) {
             uint256 hashProofOfStake = uint256();
             if (!CheckProofOfStake(pblock->vtx[1], pblock->nBits, hashProofOfStake)) {
-                //if (IsInitialBlockDownload() == false)
-                //{
-                //    printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", pblock->GetHash().ToString().c_str());
-                //    /*
-                //    // Re-request 'em immediately -- see Peershares codebase, pull request #110
-                //    if (pfrom)
-                //    {
-                //        std::vector<CInv> invs;
-                //        invs.push_back(CInv(MSG_BLOCK, pblock->GetHash()));
-                //        connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
-                //    }*/
-                //}
+                if (::ChainstateActive().IsInitialBlockDownload() == false)
+                {
+                    printf("WARNING: ProcessBlock(): check proof-of-stake failed for block %s\n", pblock->GetHash().ToString().c_str());
+                    
+                    // Re-request 'em immediately -- see Peershares codebase, pull request #110
+                    if (peer != nullptr)
+                    {
+                        std::vector<CInv> invs;
+                        invs.push_back(CInv(MSG_BLOCK, pblock->GetHash()));
+                        m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETDATA, invs));
+                    }
+                }
                 LogPrintf("Got new topblock with hash: %s\n", pblock->GetHash().ToString());
             } else {
                 if (!mapProofOfStake.count(pblock->GetHash())) // add to mapProofOfStake

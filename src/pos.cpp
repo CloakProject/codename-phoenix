@@ -44,6 +44,7 @@ public:
 typedef std::vector<TimeHash> TimestampedHashes;
 
 std::set<std::pair<COutPoint, unsigned int> > setStakeSeen;
+std::set<std::pair<COutPoint, unsigned int> > setStakeSeenOrphan; // for pos v1
 std::map<uint256, uint256> mapProofOfStake;
 
 // std::map<uint256, CBlockIndex*> m_block_index;
@@ -374,7 +375,7 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     // this change increases active coins participating the hash and helps
     // to secure the network when proof-of-stake difficulty is low
     int64_t nTimeWeight = std::min((int64_t)nTimeTx - txPrev->nTime, (int64_t)Params().GetConsensus().nStakeMaxAge) - Params().GetConsensus().nStakeMinAge;
-    arith_uint512 bnCoinDayWeight = arith_uint512(nValueIn) * nTimeWeight / (COIN / 100) / (24 * 60 * 60);
+    arith_uint512 bnCoinDayWeight = arith_uint512(nValueIn) * nTimeWeight / COIN / (24 * 60 * 60);
 
     // We need to convert to uint512 to prevent overflow when multiplying by 1st block coins
     std::string bnTargetPerCoinDayHex = bnTargetPerCoinDay.GetHex();
@@ -415,7 +416,7 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     }
     
     // We need to convert type so it can be compared to target
-    base_uint<512> hashProofOfStake512(hashProofOfStake.GetHex());
+    arith_uint512 hashProofOfStake512(hashProofOfStake.GetHex());
     
     // Now check if proof-of-stake hash meets target protocol
     if (hashProofOfStake512 > targetProofOfStake512)
@@ -490,7 +491,8 @@ bool GetCoinAge(uint64_t& nCoinAge, CTransactionRef tx)
         */
 
         // get input tx and block ref containing for block including input tx
-        if (!GetTransaction(nullptr, nullptr, txin.prevout.hash, Params().GetConsensus(), hashPrevBlock))
+        txPrev = GetTransaction(nullptr, nullptr, txin.prevout.hash, Params().GetConsensus(), hashPrevBlock);
+        if (!txPrev)
             continue;  // previous transaction not in main chain
 
         if (tx->nTime < txPrev->nTime)
@@ -535,8 +537,9 @@ bool CheckProofOfStake(const CTransactionRef tx, unsigned int nBits, uint256& ha
     uint256 hashPrevBlock = uint256();
 
     // get input tx and block ref containing for block including input tx
-    // if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), hashPrevBlock, true))
-    if (!GetTransaction(nullptr, nullptr, txin.prevout.hash, Params().GetConsensus(), hashPrevBlock))
+    // ppcoin: if (!GetTransaction(txin.prevout.hash, txPrev, Params().GetConsensus(), hashPrevBlock, true))
+    txPrev = GetTransaction(nullptr, nullptr, txin.prevout.hash, Params().GetConsensus(), hashPrevBlock);
+    if (!txPrev)
         return error("CheckProofOfStake() : INFO: read txPrev failed");  // previous transaction not in main chain, may occur during initial download
         
     CCoinsViewCache inputs(&::ChainstateActive().CoinsTip());   //  previously inputs(pcoinsTip.get())

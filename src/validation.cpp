@@ -4217,11 +4217,11 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
     
         // Limited duplicity on stake: prevents block flood attack
         // Duplicate stake allowed only when there is orphan child block
-        uint256 blockHash = pblock->GetHash();
-        if (setStakeSeen.count(block.GetProofOfStake()) && !mapOrphanBlocksByPrev.count(blockHash))
+        /*uint256 blockHash = pblock->GetHash();
+        if (setStakeSeen.count(block.GetProofOfStake()) && !m_blockman.mapOrphanBlocksByPrev.count(blockHash))
             return error("AcceptBlock() : duplicate proof-of-stake (%s, %d) for block %s", block.GetProofOfStake().first.ToString().c_str(), block.GetProofOfStake().second, blockHash.ToString().c_str());
 
-        setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));
+        setStakeSeen.insert(std::make_pair(pindex->prevoutStake, pindex->nStakeTime));*/
 
         // use PoS hash for proof
         pindex->hashProofOfStake = UintToArith256(mapProofOfStake[block.GetHash()]);
@@ -4342,38 +4342,37 @@ bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, Block
     */
 
 
-/*
-        // If don't already have its previous block, shunt it off to holding area until we get it
-        if (!mapBlockIndex.count(pblock->hashPrevBlock))
-        {
-            printf("ProcessBlock: ORPHAN BLOCK, prev=%s\n", pblock->hashPrevBlock.ToString().substr(0,20).c_str());
-            CBlock* pblock2 = new CBlock(*pblock);
-            // ppcoin: check proof-of-stake
-            if (pblock2->IsProofOfStake())
-            {
-                // Limited duplicity on stake: prevents block flood attack
-                // Duplicate stake allowed only when there is orphan child block
-                if (setStakeSeenOrphan.count(pblock2->GetProofOfStake()) && !mapOrphanBlocksByPrev.count(hash) && !Checkpoints::WantedByPendingSyncCheckpoint(hash))
-                    return error("ProcessBlock() : duplicate proof-of-stake (%s, %d) for orphan block %s", pblock2->GetProofOfStake().first.ToString().c_str(), pblock2->GetProofOfStake().second, hash.ToString().c_str());
-                else
-                    setStakeSeenOrphan.insert(pblock2->GetProofOfStake());
-            }
-            mapOrphanBlocks.insert(make_pair(hash, pblock2));
-            mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));
 
-            // TODO: move this into net_processing under [if (msg_type == NetMsgType::BLOCK)]
-            // Ask this guy to fill in what we're missing
-            if (pfrom)
-            {
-                pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblock2));
-                // ppcoin: getblocks may not obtain the ancestor block rejected
-                // earlier by duplicate-stake check so we ask for it again directly
-                if (!IsInitialBlockDownload())
-                    pfrom->AskFor(CInv(MSG_BLOCK, WantedByOrphan(pblock2)));
-            }
-            return true;
-        }
-        */
+        // If don't already have its previous block, shunt it off to holding area until we get it
+    //if (!m_blockman.m_block_index.count(pblock->hashPrevBlock) && pblock->GetHash() != chainparams.GetConsensus().hashGenesisBlock)
+    //{
+    //    printf("ProcessBlock: ORPHAN BLOCK, prev=%s\n", pblock->hashPrevBlock.ToString().substr(0,20).c_str());
+    //    CBlock* pblock2 = new CBlock(*pblock);
+    //    // ppcoin: check proof-of-stake
+    //    if (pblock2->IsProofOfStake())
+    //    {
+    //        // Limited duplicity on stake: prevents block flood attack
+    //        // Duplicate stake allowed only when there is orphan child block
+    //        if (setStakeSeenOrphan.count(pblock2->GetProofOfStake()) && !m_blockman.mapOrphanBlocksByPrev.count(pblock->GetHash()))
+    //            return error("AcceptBlock() : duplicate proof-of-stake (%s, %d) for orphan block %s", pblock2->GetProofOfStake().first.ToString().c_str(), pblock2->GetProofOfStake().second, pblock->GetHash().ToString().c_str());
+    //        else
+    //            setStakeSeenOrphan.insert(pblock2->GetProofOfStake());
+    //    }
+    //    m_blockman.mapOrphanBlocks.insert(std::make_pair(pblock->GetHash(), pblock2));
+    //    m_blockman.mapOrphanBlocksByPrev.insert(std::make_pair(pblock2->hashPrevBlock, pblock2));
+    //    // TODO: move this into net_processing under [if (msg_type == NetMsgType::BLOCK)]
+    //    // Ask this guy to fill in what we're missing
+    //    /*if (pfrom)
+    //    {
+    //        pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblock2));
+    //        // ppcoin: getblocks may not obtain the ancestor block rejected
+    //        // earlier by duplicate-stake check so we ask for it again directly
+    //        if (!IsInitialBlockDownload())
+    //            pfrom->AskFor(CInv(MSG_BLOCK, WantedByOrphan(pblock2)));
+    //    }*/
+    //    return true;
+    //}
+        
 
 
 
@@ -4927,26 +4926,26 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
 
 void CChainState::PruneOrphanBlocks()
 {
-    if (mapOrphanBlocksByPrev.size() <= (size_t)std::max((int64_t)0, gArgs.GetArg("-maxorphanblocks", DEFAULT_MAX_ORPHAN_BLOCKS)))
+    if (m_blockman.mapOrphanBlocksByPrev.size() <= (size_t)std::max((int64_t)0, gArgs.GetArg("-maxorphanblocks", DEFAULT_MAX_ORPHAN_BLOCKS)))
         return;
 
     // Pick a random orphan block.
-    int pos = GetRandInt(mapOrphanBlocksByPrev.size() - 1);
-    BlockMap::iterator it = mapOrphanBlocksByPrev.begin();
+    int pos = GetRandInt(m_blockman.mapOrphanBlocksByPrev.size() - 1);
+    std::map<uint256, CBlock*>::iterator it = m_blockman.mapOrphanBlocksByPrev.begin();
     while (pos--) it++;
 
     // As long as this block has other orphans depending on it, move to one of those successors.
     do {
-        BlockMap::iterator it2 = mapOrphanBlocksByPrev.find(it->second->GetBlockHash());
-        if (it2 == mapOrphanBlocksByPrev.end())
+        std::map<uint256, CBlock*>::iterator it2 = m_blockman.mapOrphanBlocksByPrev.find(it->second->GetHash());
+        if (it2 == m_blockman.mapOrphanBlocksByPrev.end())
             break;
         it = it2;
     } while (1);
 
-    uint256 hash = it->second->GetBlockHash();
+    uint256 hash = it->second->GetHash();
     delete it->second;
-    mapOrphanBlocksByPrev.erase(it);
-    mapOrphanBlocks.erase(hash);
+    m_blockman.mapOrphanBlocksByPrev.erase(it);
+    m_blockman.mapOrphanBlocks.erase(hash);
 }
 
 /** Apply the effects of a block on the utxo cache, ignoring that it may already have been applied. */
