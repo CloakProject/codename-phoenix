@@ -401,6 +401,8 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     ss << nStakeModifier;
     ss << nTimeBlockFrom << nTxPrevOffset << txPrev->nTime << prevout.n << nTimeTx;
     hashProofOfStake = Hash(ss);
+    LogPrintf("hashProofOfStake (Hash(ss)): %s\n", hashProofOfStake.ToString().c_str());
+    LogPrintf("hashProofOfStake.GetHex(): %s\n", hashProofOfStake.GetHex().c_str());
     if (fPrintProofOfStake)
     {
         LogPrint(BCLog::ALL, "CheckStakeKernelHash() : using modifier 0x%d at height=%d timestamp=%s for block from height=%d timestamp=%s\n",
@@ -421,6 +423,8 @@ bool CheckStakeKernelHash(unsigned int nBits, CBlockIndex* pindexPrev, unsigned 
     // Now check if proof-of-stake hash meets target protocol
     if (hashProofOfStake512 > targetProofOfStake512)
     {
+        LogPrintf("hashProofOfStake512: %s\n", hashProofOfStake512.ToString().c_str());
+        LogPrintf("targetProofOfStake512: %s\n", targetProofOfStake512.ToString().c_str());
         LogPrint(BCLog::ALL, ">>> bnCoinDayWeight = %s, bnTargetPerCoinDay=%s\n", bnCoinDayWeight.ToString().c_str(), bnTargetPerCoinDay.ToString().c_str());
         LogPrint(BCLog::ALL, ">>> CheckStakeKernelHash - hashProofOfStake too much\n");
         return false;

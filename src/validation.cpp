@@ -2118,10 +2118,8 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
     arith_uint512 bnNew512(bnNew.GetHex());
 
     int64_t nTargetSpacing = fProofOfStake ? Params().GetConsensus().nStakeTargetSpacing : std::min(Params().GetConsensus().nPowTargetSpacing, (int64_t)Params().GetConsensus().nStakeTargetSpacing * (1 + (int64_t)pindexLast->nHeight - (int64_t)pindexPrev->nHeight));
-    // nTargetSpacing = 60
     int64_t nInterval = Params().GetConsensus().nPowTargetTimespan / nTargetSpacing;
-    // nInterval = 60 * 30 / 60 = 30
-    // nActualSpacing = 1
+
     bnNew512 *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
     bnNew512 /= ((nInterval + 1) * nTargetSpacing);
 
