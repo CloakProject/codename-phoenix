@@ -16,5 +16,38 @@
       "features": ["thread"]
     },
     "zeromq"
-  ]
+  ],
+  "overrides": [
+    { 
+      "name": "boost-filesystem",
+      "version": "1.76.0"
+    },
+    { 
+      "name": "boost-multi-index",
+      "version": "1.76.0"
+    },
+    { 
+      "name": "boost-process",
+      "version": "1.76.0"
+    },
+	    { 
+      "name": "boost-signals2",
+      "version": "1.76.0"
+    },
+    { 
+      "name": "boost-test",
+      "version": "1.76.0"
+    },
+	    { 
+      "name": "boost-thread",
+      "version": "1.76.0"
+    }
+  ],
+  "vcpkg-configuration": {
+	"default-registry": {
+	  "kind": "git",
+	  "repository": "https://github.com/microsoft/vcpkg",
+	  "baseline": "f6a5d4e8eb7476b8d7fc12a56dff300c1c986131"
+	}
+  }  
 }
