@@ -606,7 +606,8 @@ CService HTTPRequest::GetPeer() const
         // evhttp retains ownership over returned address string
         const char* address = "";
         uint16_t port = 0;
-        evhttp_connection_get_peer(con, (char**)&address, &port);
+        evhttp_connection_get_peer(con, const_cast<const char**>(&address), &port);
+        //evhttp_connection_get_peer(con, (char**)&address, &port);
         peer = LookupNumeric(address, port);
     }
     return peer;
